@@ -170,6 +170,15 @@ flutter build apk --release --dart-define=API_URL=https://<URL>/api
 ```
 ไฟล์อยู่ที่ `build\app\outputs\flutter-apk\app-release.apk` ส่งเข้ามือถือแล้วติดตั้ง
 
+**4) แอปนักศึกษาแบบเว็บ** (เปิดผ่านเบราว์เซอร์ได้ทั้ง iPhone/Android ที่ `https://<URL>/app/`)
+Render build Flutter ไม่ได้ จึง build ในเครื่องแล้ว commit ไฟล์ไว้ที่ `backend/public/app/` — ทำใหม่ทุกครั้งที่แก้แอป:
+```
+cd mobile
+flutter build web --release --base-href /app/ --dart-define=API_URL=https://<URL>/api
+```
+แล้วคัดลอก `mobile/build/web/*` ไปทับ `backend/public/app/` (ลบไฟล์ `*.symbols` ทิ้งได้) แล้ว commit + push
+และเพิ่ม `https://<URL>` ใน Authorized JavaScript origins ของ Google OAuth client เพื่อให้ปุ่ม Login ด้วย Google ใช้ได้
+
 **ข้อจำกัดของแพ็กเกจฟรี**
 - Render หลับเมื่อไม่มีคนใช้ 15 นาที คนแรกที่เข้าต้องรอ ~30-60 วินาที (แอปรอได้ถึง 70 วินาที)
 - ระหว่างแอปร้านค้าเปิดอยู่ เซิร์ฟเวอร์จะไม่หลับ เพราะแอปเช็คออเดอร์ทุก 5 วินาที
