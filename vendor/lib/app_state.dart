@@ -14,19 +14,25 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> restore() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('vendor_token');
-    if (token != null) {
-      api.token = token;
-      try {
-        user = await api.me();
-        if (user!.role != 'vendor') user = null;
-      } catch (_) {
-        api.token = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('vendor_token');
+      if (token != null) {
+        api.token = token;
+        try {
+          user = await api.me();
+          if (user!.role != 'vendor') user = null;
+        } catch (_) {
+          api.token = null;
+        }
       }
+    } catch (e) {
+      // อ่านข้อมูลที่บันทึกไว้ไม่ได้ → ไปหน้า Login แทนการค้างที่หน้าโหลด
+      debugPrint('restore failed: $e');
+    } finally {
+      restoring = false;
+      notifyListeners();
     }
-    restoring = false;
-    notifyListeners();
   }
 
   Future<void> login(String username, String password) async {
@@ -34,16 +40,24 @@ class AppState extends ChangeNotifier {
     if (u.role != 'vendor') throw ApiException(403, 'แอปนี้สำหรับบัญชีร้านค้าเท่านั้น');
     api.token = token;
     user = u;
-    (await SharedPreferences.getInstance()).setString('vendor_token', token);
     notifyListeners();
+    try {
+      await (await SharedPreferences.getInstance()).setString('vendor_token', token);
+    } catch (e) {
+      debugPrint('save token failed: $e');
+    }
   }
 
   Future<void> logout() async {
     api.token = null;
     user = null;
     tab = 0;
-    (await SharedPreferences.getInstance()).remove('vendor_token');
     notifyListeners();
+    try {
+      await (await SharedPreferences.getInstance()).remove('vendor_token');
+    } catch (e) {
+      debugPrint('clear token failed: $e');
+    }
   }
 
   void goTab(int i) {

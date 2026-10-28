@@ -17,19 +17,25 @@ class AppState extends ChangeNotifier {
 
   // ---------- auth ----------
   Future<void> restore() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    if (token != null) {
-      api.token = token;
-      try {
-        user = await api.me();
-        await loadFavorites();
-      } catch (_) {
-        api.token = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      if (token != null) {
+        api.token = token;
+        try {
+          user = await api.me();
+          await loadFavorites();
+        } catch (_) {
+          api.token = null;
+        }
       }
+    } catch (e) {
+      // อ่านข้อมูลที่บันทึกไว้ไม่ได้ → ไปหน้า Login แทนการค้างที่หน้าโหลด
+      debugPrint('restore failed: $e');
+    } finally {
+      restoring = false;
+      notifyListeners();
     }
-    restoring = false;
-    notifyListeners();
   }
 
   Future<void> _signedIn(String token, User u) async {
@@ -38,8 +44,12 @@ class AppState extends ChangeNotifier {
     }
     api.token = token;
     user = u;
-    (await SharedPreferences.getInstance()).setString('token', token);
-    await loadFavorites();
+    try {
+      await (await SharedPreferences.getInstance()).setString('token', token);
+    } catch (e) {
+      debugPrint('save token failed: $e'); // ล็อกอินได้ แค่ต้องล็อกอินใหม่เมื่อเปิดแอปครั้งหน้า
+    }
+    await loadFavorites().catchError((_) {});
     notifyListeners();
   }
 
@@ -63,8 +73,12 @@ class AppState extends ChangeNotifier {
     selectedShopId = null;
     clearCart();
     favoriteIds.clear();
-    (await SharedPreferences.getInstance()).remove('token');
     notifyListeners();
+    try {
+      await (await SharedPreferences.getInstance()).remove('token');
+    } catch (e) {
+      debugPrint('clear token failed: $e');
+    }
   }
 
   // ---------- navigation ----------
