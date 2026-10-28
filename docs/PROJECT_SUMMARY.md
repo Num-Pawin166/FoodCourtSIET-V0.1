@@ -8,7 +8,7 @@
 |---|---|
 | เว็บหลังบ้าน (ร้านค้า / ผู้ดูแล) | https://foodcourt-siet.onrender.com |
 | แอปนักศึกษาแบบเว็บ | https://foodcourt-siet.onrender.com/app/ |
-| Source code | https://github.com/Num-Pawin166/FoodCourtSIET-demo |
+| Source code | https://github.com/Num-Pawin166/FoodCourtSIET-V0.1 |
 
 ---
 
