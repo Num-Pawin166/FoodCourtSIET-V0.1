@@ -1,0 +1,32 @@
+# Render Blueprint — New → Blueprint → เลือก repo นี้
+# ค่าที่เป็น sync: false ต้องกรอกเองตอนสร้าง (เป็นความลับ ไม่เก็บใน git)
+services:
+  - type: web
+    name: foodcourt-siet
+    runtime: node
+    plan: free
+    region: singapore          # ใกล้ไทย และควรสร้าง Turso DB ที่ region เดียวกัน (aws-ap-southeast-1)
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TURSO_DATABASE_URL       # libsql://<db>-<org>.turso.io
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash
+      - key: GEMINI_FALLBACK_MODEL
+        value: gemini-3.5-flash-lite
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: ALLOWED_EMAIL_DOMAIN
+        value: kmitl.ac.th
