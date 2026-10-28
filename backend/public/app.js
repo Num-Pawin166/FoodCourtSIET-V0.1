@@ -125,6 +125,7 @@ $('#logout').onclick = logout;
 function logout() {
   state.token = null; state.user = null; state.seenPending = null;
   localStorage.removeItem('fc_token');
+  updateAlarm(0);
   clearInterval(state.poll);
   $('#app-view').classList.add('hidden');
   $('#login-view').classList.remove('hidden');
@@ -160,17 +161,41 @@ function render() {
 // =====================================================================
 //  ร้านค้า
 // =====================================================================
-function beep() {
-  try {
-    const ctx = (beep.ctx ||= new AudioContext());
-    [0, 0.18].forEach((t) => {
-      const o = ctx.createOscillator(); const g = ctx.createGain();
-      o.frequency.value = 880; g.gain.value = 0.15;
-      o.connect(g).connect(ctx.destination);
-      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.12);
-    });
-  } catch { /* เบราว์เซอร์ไม่อนุญาตเสียง */ }
+// เสียงเตือนออเดอร์ใหม่: ดังซ้ำทุก 3 วินาทีจนกว่าร้านจะรับ/ปฏิเสธออเดอร์ใหม่ครบ
+const alarm = { audio: null, timer: null, pending: 0, blocked: false };
+
+function ringOnce() {
+  alarm.audio ||= new Audio('new_order.wav');
+  alarm.audio.currentTime = 0;
+  alarm.audio.play()
+    .then(() => { if (alarm.blocked) { alarm.blocked = false; renderAlarmBar(); } })
+    // เบราว์เซอร์บล็อกเสียงจนกว่าผู้ใช้จะคลิกหน้าเว็บ (เช่น หลังรีเฟรช)
+    .catch(() => { if (!alarm.blocked) { alarm.blocked = true; renderAlarmBar(); } });
 }
+
+function updateAlarm(pendingCount) {
+  alarm.pending = pendingCount;
+  if (pendingCount > 0 && !alarm.timer) {
+    ringOnce();
+    alarm.timer = setInterval(ringOnce, 3000);
+  } else if (pendingCount === 0 && alarm.timer) {
+    clearInterval(alarm.timer);
+    alarm.timer = null;
+    alarm.blocked = false;
+  }
+  renderAlarmBar();
+}
+
+function renderAlarmBar() {
+  const bar = $('#alarm-bar');
+  if (!bar) return;
+  bar.classList.toggle('hidden', alarm.pending === 0);
+  bar.innerHTML = `🔔 มีออเดอร์ใหม่ ${alarm.pending} รายการ รอร้านกดรับ`
+    + (alarm.blocked ? ' — <u>คลิกที่ใดก็ได้เพื่อเปิดเสียงแจ้งเตือน</u>' : '');
+}
+
+// คลิกครั้งแรกบนหน้าเว็บ = อนุญาตให้เล่นเสียง
+document.addEventListener('click', () => { if (alarm.blocked && alarm.timer) ringOnce(); });
 
 async function vendorTick() {
   const orders = await api('/vendor/orders?scope=active').catch(() => null);
@@ -180,7 +205,8 @@ async function vendorTick() {
   if (badge) { badge.textContent = pending.length; badge.classList.toggle('hidden', !pending.length); }
   const newOnes = state.seenPending ? pending.filter((o) => !state.seenPending.has(o.id)) : [];
   state.seenPending = new Set(pending.map((o) => o.id));
-  if (newOnes.length) { beep(); toast(`ออเดอร์ใหม่ ${newOnes.map((o) => o.queue_no).join(', ')}`); }
+  if (newOnes.length) toast(`ออเดอร์ใหม่ ${newOnes.map((o) => o.queue_no).join(', ')}`);
+  updateAlarm(pending.length);
   if (location.hash === '#orders') renderBoard(orders, new Set(newOnes.map((o) => o.id)));
 }
 
@@ -197,6 +223,7 @@ const ACTIONS = {
 PAGES.orders = async () => {
   const [shop, summary, orders] = await Promise.all([api('/vendor/shop'), api('/vendor/summary'), api('/vendor/orders?scope=active')]);
   state.seenPending ??= new Set(orders.filter((o) => o.status === 'pending').map((o) => o.id));
+  updateAlarm(orders.filter((o) => o.status === 'pending').length);
   $('#main').innerHTML = `
     <div class="page-head">
       <div><h1>ออเดอร์</h1><div class="muted">${esc(shop.name)} · อัปเดตอัตโนมัติทุก 5 วินาที</div></div>

@@ -28,20 +28,21 @@ class Shop {
   final bool openNow;
   final int queueCount;
   final bool promptpayEnabled;
+  final String? imageUrl;
   final List<MenuItem> menu;
   final List<String> pickupSlots;
 
   Shop({
     required this.id, required this.code, required this.name, required this.description, required this.category,
     required this.openTime, required this.closeTime, required this.prepMin, required this.prepMax,
-    required this.openNow, required this.queueCount, this.promptpayEnabled = false, this.menu = const [], this.pickupSlots = const [],
+    required this.openNow, required this.queueCount, this.promptpayEnabled = false, this.imageUrl, this.menu = const [], this.pickupSlots = const [],
   });
 
   factory Shop.fromJson(Map<String, dynamic> j) => Shop(
         id: j['id'], code: j['code'], name: j['name'], description: j['description'] ?? '', category: j['category'],
         openTime: j['open_time'], closeTime: j['close_time'], prepMin: j['prep_min'], prepMax: j['prep_max'],
         openNow: j['open_now'] == true, queueCount: j['queue_count'] ?? 0,
-        promptpayEnabled: j['promptpay_enabled'] == true,
+        promptpayEnabled: j['promptpay_enabled'] == true, imageUrl: j['image_url'],
         menu: (j['menu'] as List? ?? []).map((e) => MenuItem.fromJson(e)).toList(),
         pickupSlots: (j['pickup_slots'] as List? ?? []).cast<String>(),
       );

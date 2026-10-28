@@ -55,11 +55,16 @@ class Api {
   }
 
   Future<Vendor> me() async => Vendor.fromJson(await _send('GET', '/auth/me'));
+  Future<Vendor> updateMe(String name) async => Vendor.fromJson(await _send('PATCH', '/auth/me', {'name': name}));
+  Future<void> changePassword(String current, String next) =>
+      _send('PATCH', '/auth/me/password', {'current_password': current, 'new_password': next});
 
   // ร้าน
   Future<Shop> shop() async => Shop.fromJson(await _send('GET', '/vendor/shop'));
   Future<Shop> updateShop(Map<String, dynamic> body) async => Shop.fromJson(await _send('PATCH', '/vendor/shop', body));
   Future<Summary> summary() async => Summary.fromJson(await _send('GET', '/vendor/summary'));
+  Future<Shop> uploadShopImage(List<int> bytes) async => Shop.fromJson(await _send('POST', '/vendor/shop/image', null, bytes));
+  Future<Shop> deleteShopImage() async => Shop.fromJson(await _send('DELETE', '/vendor/shop/image'));
 
   // ออเดอร์: scope = active (ยังไม่จบ) | today (ทั้งหมดของวันนี้)
   Future<List<Order>> orders({bool today = false}) async =>

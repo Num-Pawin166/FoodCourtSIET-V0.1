@@ -22,7 +22,29 @@ class VendorShell extends StatelessWidget {
       // IndexedStack: หน้าออเดอร์ยัง poll/แจ้งเตือนต่อแม้สลับไปแท็บอื่น
       body: SafeArea(
         bottom: false,
-        child: IndexedStack(index: state.tab, children: const [OrdersScreen(), MenuScreen(), ShopScreen()]),
+        child: Column(children: [
+          if (state.pendingCount > 0)
+            // แถบเตือนทุกแท็บ จนกว่าร้านจะรับ/ปฏิเสธออเดอร์ใหม่ครบ (เสียงดังซ้ำควบคู่กัน)
+            Material(
+              color: AppColors.red,
+              child: InkWell(
+                onTap: () => state.goTab(0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(children: [
+                    const Icon(Icons.notifications_active, color: Colors.white),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('มีออเดอร์ใหม่ ${state.pendingCount} รายการ รอร้านกดรับ',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    ),
+                    if (state.tab != 0) const Text('ดูออเดอร์ ›', style: TextStyle(color: Colors.white)),
+                  ]),
+                ),
+              ),
+            ),
+          Expanded(child: IndexedStack(index: state.tab, children: const [OrdersScreen(), MenuScreen(), ShopScreen()])),
+        ]),
       ),
       bottomNavigationBar: SafeArea(
         child: Container(

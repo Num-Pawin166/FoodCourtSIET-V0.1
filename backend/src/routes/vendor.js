@@ -71,6 +71,24 @@ r.patch('/orders/:id/status', async (req, res) => {
   res.json(await serializeOrder(await db.get('SELECT * FROM orders WHERE id = ?', o.id)));
 });
 
+// รูปร้าน (แสดงในการ์ดร้านของแอปนักศึกษา) — เก็บเป็นรูปสาธารณะแบบเดียวกับรูปเมนู
+r.post('/shop/image', rawImage, async (req, res) => {
+  const imageId = await storeImage(req, 'menu');
+  await db.batch([
+    { sql: 'UPDATE shops SET image_url = ? WHERE id = ?', args: [imageUrl(imageId), req.shop.id] },
+    ...imageDeletes(req.shop.image_url),
+  ]);
+  res.json(await shopForOwner(await db.get('SELECT * FROM shops WHERE id = ?', req.shop.id)));
+});
+
+r.delete('/shop/image', async (req, res) => {
+  await db.batch([
+    { sql: 'UPDATE shops SET image_url = NULL WHERE id = ?', args: [req.shop.id] },
+    ...imageDeletes(req.shop.image_url),
+  ]);
+  res.json(await shopForOwner(await db.get('SELECT * FROM shops WHERE id = ?', req.shop.id)));
+});
+
 // ---------- การชำระเงิน ----------
 // PATCH /vendor/orders/:id/payment { action: 'confirm' | 'reject', reason? }
 r.patch('/orders/:id/payment', async (req, res) => {

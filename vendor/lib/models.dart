@@ -23,18 +23,19 @@ class Shop {
   final bool openNow;
   final int queueCount;
   final String? promptpayId;
+  final String? imageUrl;
 
   Shop({
     required this.id, required this.code, required this.name, required this.description, required this.category,
     required this.openTime, required this.closeTime, required this.prepMin, required this.prepMax,
-    required this.isOpen, required this.openNow, required this.queueCount, this.promptpayId,
+    required this.isOpen, required this.openNow, required this.queueCount, this.promptpayId, this.imageUrl,
   });
 
   factory Shop.fromJson(Map<String, dynamic> j) => Shop(
         id: j['id'], code: j['code'], name: j['name'], description: j['description'] ?? '', category: j['category'],
         openTime: j['open_time'], closeTime: j['close_time'], prepMin: j['prep_min'], prepMax: j['prep_max'],
         isOpen: j['is_open'] == true, openNow: j['open_now'] == true, queueCount: j['queue_count'] ?? 0,
-        promptpayId: j['promptpay_id'],
+        promptpayId: j['promptpay_id'], imageUrl: j['image_url'],
       );
 }
 

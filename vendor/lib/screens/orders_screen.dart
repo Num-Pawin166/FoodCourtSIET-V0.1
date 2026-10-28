@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../order_alarm.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -28,6 +29,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String? _error;
   Timer? _poll;
   final Set<int> _busy = {};
+  final _alarm = OrderAlarm();
 
   @override
   void initState() {
@@ -39,6 +41,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    _alarm.dispose();
     super.dispose();
   }
 
@@ -56,6 +59,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
       final pendingIds = active.where((o) => o.status == 'pending').map((o) => o.id).toSet();
       final fresh = _seenPending == null ? <int>{} : pendingIds.difference(_seenPending!);
       if (fresh.isNotEmpty) _alertNew(active.where((o) => fresh.contains(o.id)).toList());
+      // ดังซ้ำจนกว่าออเดอร์ใหม่ทุกใบจะถูกรับหรือปฏิเสธ (รวมออเดอร์ที่ค้างตั้งแต่ก่อนเปิดแอป)
+      _alarm.update(pendingIds.length);
+      context.read<AppState>().setPendingCount(pendingIds.length);
       setState(() {
         _shop = r[0] as Shop;
         _summary = r[1] as Summary;
@@ -71,8 +77,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   void _alertNew(List<Order> orders) {
-    SystemSound.play(SystemSoundType.alert);
-    HapticFeedback.heavyImpact();
     showMsg(context, '🔔 ออเดอร์ใหม่ ${orders.map((o) => o.queueNo).join(', ')}');
   }
 

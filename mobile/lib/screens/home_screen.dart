@@ -170,7 +170,7 @@ class _ShopCard extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: cardDecoration(),
           child: Row(children: [
-            FoodImage(width: 84, height: 84, icon: shop.category == 'เครื่องดื่ม' ? Icons.local_cafe_outlined : shop.category == 'เส้น' ? Icons.ramen_dining_outlined : Icons.rice_bowl_outlined),
+            FoodImage(width: 84, height: 84, icon: shop.category == 'เครื่องดื่ม' ? Icons.local_cafe_outlined : shop.category == 'เส้น' ? Icons.ramen_dining_outlined : Icons.rice_bowl_outlined, imageUrl: shop.imageUrl),
             const SizedBox(width: 12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

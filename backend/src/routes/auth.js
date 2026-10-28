@@ -84,6 +84,14 @@ r.post('/register', async (req, res) => {
 
 r.get('/me', auth(), async (req, res) => res.json(await publicUser(req.user)));
 
+// แก้โปรไฟล์ตัวเอง (ตอนนี้แก้ได้เฉพาะชื่อที่แสดง)
+r.patch('/me', auth(), async (req, res) => {
+  const name = String(req.body?.name ?? '').trim();
+  if (name.length < 2 || name.length > 100) throw new HttpError(400, 'ชื่อต้องมี 2-100 ตัวอักษร');
+  await db.run('UPDATE users SET name = ? WHERE id = ?', name, req.user.id);
+  res.json(await publicUser(await db.get('SELECT * FROM users WHERE id = ?', req.user.id)));
+});
+
 // สถิติหน้า "บัญชีของฉัน": ออเดอร์เดือนนี้ / ยอดใช้จ่ายเดือนนี้
 r.get('/me/stats', auth(), async (req, res) => {
   const row = await db.get(

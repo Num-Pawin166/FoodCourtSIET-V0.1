@@ -52,12 +52,27 @@ class AppState extends ChangeNotifier {
     api.token = null;
     user = null;
     tab = 0;
+    pendingCount = 0;
     notifyListeners();
     try {
       await (await SharedPreferences.getInstance()).remove('vendor_token');
     } catch (e) {
       debugPrint('clear token failed: $e');
     }
+  }
+
+  void setUser(Vendor u) {
+    user = u;
+    notifyListeners();
+  }
+
+  /// จำนวนออเดอร์ใหม่ที่รอร้านรับ (ใช้แสดงแถบเตือนทุกแท็บ)
+  int pendingCount = 0;
+
+  void setPendingCount(int n) {
+    if (n == pendingCount) return;
+    pendingCount = n;
+    notifyListeners();
   }
 
   void goTab(int i) {
