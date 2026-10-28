@@ -6,6 +6,7 @@ import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'cart_screen.dart';
+import 'payment_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -157,6 +158,8 @@ class _ActiveOrder extends StatelessWidget {
           const SizedBox(height: 10),
           Text('${order.items.map((i) => '${i.name} ×${i.qty}').join(', ')} · ${baht(order.total)}',
               textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.muted)),
+          const SizedBox(height: 10),
+          _PaymentRow(order: order),
         ]),
       ),
       const SizedBox(height: 18),
@@ -271,7 +274,9 @@ class _HistoryCard extends StatelessWidget {
           ),
         const Divider(color: AppColors.ink2, height: 20),
         Row(children: [
-          Expanded(child: Text(baht(order.total), style: TextStyle(fontWeight: FontWeight.w700, decoration: cancelled ? TextDecoration.lineThrough : null))),
+          Text(baht(order.total), style: TextStyle(fontWeight: FontWeight.w700, decoration: cancelled ? TextDecoration.lineThrough : null)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(order.paymentLabel, style: const TextStyle(fontSize: 11, color: AppColors.muted))),
           OutlinedButton.icon(
             onPressed: () => _reorder(context),
             icon: const Icon(Icons.refresh, size: 16),
@@ -286,5 +291,42 @@ class _HistoryCard extends StatelessWidget {
         ]),
       ]),
     );
+  }
+}
+
+/// สถานะการชำระเงินบนการ์ดออเดอร์ + ปุ่มไปหน้าโอน/แนบสลิป
+class _PaymentRow extends StatelessWidget {
+  final Order order;
+  const _PaymentRow({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    final (color, icon) = switch (order.paymentStatus) {
+      'paid' => (AppColors.green, Icons.check_circle),
+      'slip_uploaded' => (const Color(0xFFA86400), Icons.hourglass_top),
+      'rejected' => (AppColors.red, Icons.error_outline),
+      _ => (order.isPromptPay ? AppColors.accent : AppColors.ink2, order.isPromptPay ? Icons.qr_code_2 : Icons.payments_outlined),
+    };
+    return Row(children: [
+      Icon(icon, size: 18, color: color),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          order.paymentStatus == 'rejected' && order.paymentNote != null ? '${order.paymentLabel}: ${order.paymentNote}' : order.paymentLabel,
+          style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w600),
+        ),
+      ),
+      if (order.isPromptPay && order.paymentStatus != 'paid')
+        FilledButton(
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentScreen(orderId: order.id))),
+          style: FilledButton.styleFrom(
+            backgroundColor: order.needsPayment ? AppColors.accent : AppColors.pinkSoft,
+            foregroundColor: order.needsPayment ? Colors.white : AppColors.accent,
+            visualDensity: VisualDensity.compact,
+            shape: const StadiumBorder(),
+          ),
+          child: Text(order.needsPayment ? 'ชำระเงิน' : 'ดูสลิป', style: const TextStyle(fontSize: 12)),
+        ),
+    ]);
   }
 }

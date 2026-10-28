@@ -15,6 +15,7 @@ class ShopScreen extends StatefulWidget {
 class _ShopScreenState extends State<ShopScreen> {
   Shop? _shop;
   final _desc = TextEditingController();
+  final _promptpay = TextEditingController();
   String _open = '07:30';
   String _close = '17:00';
   int _prepMin = 5;
@@ -31,6 +32,7 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   void dispose() {
     _desc.dispose();
+    _promptpay.dispose();
     super.dispose();
   }
 
@@ -41,6 +43,7 @@ class _ShopScreenState extends State<ShopScreen> {
       setState(() {
         _shop = s;
         _desc.text = s.description;
+        _promptpay.text = s.promptpayId ?? '';
         _open = s.openTime;
         _close = s.closeTime;
         _prepMin = s.prepMin;
@@ -70,6 +73,7 @@ class _ShopScreenState extends State<ShopScreen> {
       final s = await context.read<AppState>().api.updateShop({
         'description': _desc.text.trim(), 'open_time': _open, 'close_time': _close,
         'prep_min': _prepMin, 'prep_max': _prepMax, 'is_open': _isOpen,
+        'promptpay_id': _promptpay.text.trim(),
       });
       if (!mounted) return;
       setState(() => _shop = s);
@@ -131,6 +135,25 @@ class _ShopScreenState extends State<ShopScreen> {
         maxLength: 300,
         decoration: const InputDecoration(labelText: 'คำอธิบายร้าน (แสดงในแอปนักศึกษา)', counterText: ''),
       )),
+      const SizedBox(height: 14),
+      _section(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Row(children: [
+          Icon(Icons.qr_code_2, color: AppColors.accent),
+          SizedBox(width: 8),
+          Text('รับโอนพร้อมเพย์', style: TextStyle(fontWeight: FontWeight.w600)),
+        ]),
+        const SizedBox(height: 4),
+        const Text('ใส่เบอร์มือถือหรือเลขบัตรประชาชนที่ผูกพร้อมเพย์ ลูกค้าจะเห็น QR พร้อมยอดเงินแล้วแนบสลิปมาให้ตรวจ\n'
+            'เว้นว่าง = รับเฉพาะจ่ายที่ร้าน',
+            style: TextStyle(fontSize: 12, color: AppColors.ink2)),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _promptpay,
+          keyboardType: TextInputType.number,
+          maxLength: 15,
+          decoration: const InputDecoration(hintText: 'เช่น 0812345678', counterText: '', prefixIcon: Icon(Icons.phone_iphone, color: AppColors.ink2)),
+        ),
+      ])),
       const SizedBox(height: 18),
       PinkButton(onPressed: _save, loading: _saving, child: const Text('บันทึก')),
       const SizedBox(height: 6),

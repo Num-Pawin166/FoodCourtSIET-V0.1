@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ใช้เลือกรูปเมนูอาหาร</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ใช้ถ่ายรูปเมนูอาหาร</string>
 </dict>
 </plist>

@@ -103,6 +103,7 @@ export function serializeShop(s, queue = new Map()) {
     open_time: s.open_time, close_time: s.close_time, prep_min: s.prep_min, prep_max: s.prep_max,
     is_open: !!s.is_open, open_now: isShopOpenNow(s), image_url: s.image_url,
     queue_count: queue.get(s.id) ?? 0,
+    promptpay_enabled: !!s.promptpay_id, // เลขพร้อมเพย์จริงส่งให้เฉพาะเจ้าของร้าน (vendor/shop)
   };
 }
 export async function serializeShops(shops) {
@@ -177,6 +178,8 @@ export async function serializeOrders(orders) {
       items: lines, item_count: lines.reduce((s, i) => s + i.qty, 0),
       pickup_time: o.pickup_time, note: o.note, total: o.total, cancel_reason: o.cancel_reason,
       queue_ahead: queueAhead,
+      payment_method: o.payment_method ?? 'cash', payment_status: o.payment_status ?? 'unpaid',
+      has_slip: !!o.slip_image_id, payment_note: o.payment_note ?? null, paid_at: o.paid_at ?? null,
       created_at: o.created_at, accepted_at: o.accepted_at, cooking_at: o.cooking_at,
       ready_at: o.ready_at, completed_at: o.completed_at, cancelled_at: o.cancelled_at,
     };

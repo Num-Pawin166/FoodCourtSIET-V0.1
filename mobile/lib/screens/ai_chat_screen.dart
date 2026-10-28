@@ -201,7 +201,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: AppColors.pinkSoft, width: 1.5)),
               child: Row(children: [
-                const FoodImage(width: 52, height: 52),
+                FoodImage(width: 52, height: 52, imageUrl: p.imageUrl),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -27,7 +27,7 @@ function rateLimit(userId) {
 async function buildContext() {
   const [allShops, menu, queue] = await Promise.all([
     db.all('SELECT * FROM shops ORDER BY code'),
-    db.all('SELECT id, shop_id, name, description, price FROM menu_items WHERE is_available = 1 ORDER BY sort_order, id'),
+    db.all('SELECT id, shop_id, name, description, price, image_url FROM menu_items WHERE is_available = 1 ORDER BY sort_order, id'),
     queueCounts(),
   ]);
   return allShops.filter((s) => isShopOpenNow(s)).map((s) => ({
@@ -39,7 +39,7 @@ async function buildContext() {
     earliest_pickup: pickupSlots(s)[0] || null,
     closes_at: s.close_time,
     menu: menu.filter((m) => m.shop_id === s.id)
-      .map((m) => ({ menu_item_id: m.id, name: m.name, description: m.description, price: m.price })),
+      .map((m) => ({ menu_item_id: m.id, name: m.name, description: m.description, price: m.price, image_url: m.image_url })),
   })).filter((s) => s.menu.length && s.earliest_pickup);
 }
 
@@ -74,7 +74,7 @@ async function askGeminiModel(model, messages, context) {
 - ถ้าไม่มีเมนูที่ตรงเงื่อนไข ให้บอกตรงๆ และเสนอทางเลือกที่ใกล้เคียงที่สุด
 - ถ้าผู้ใช้คุยเรื่องอื่นที่ไม่เกี่ยวกับอาหารในศูนย์อาหาร ให้ชวนกลับมาเรื่องเลือกเมนูอย่างสุภาพ และ picks เป็น []
 ข้อมูลร้านและเมนู (JSON):
-${JSON.stringify(context)}`;
+${JSON.stringify(context, (k, v) => (k === 'image_url' ? undefined : v))}`;
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
     method: 'POST',
@@ -185,7 +185,7 @@ r.post('/chat', async (req, res) => {
     if (m && !items.some((x) => x.menu_item_id === m.menu_item_id)) {
       items.push({
         menu_item_id: m.menu_item_id, name: m.name, price: m.price, shop_id: m.shop_id, shop_name: m.shop_name,
-        earliest_pickup: m.earliest_pickup, queue_now: m.queue_now, reason: String(p.reason || '').slice(0, 200),
+        earliest_pickup: m.earliest_pickup, queue_now: m.queue_now, reason: String(p.reason || '').slice(0, 200), image_url: m.image_url ?? null,
       });
     }
     if (items.length >= MAX_PICKS) break;

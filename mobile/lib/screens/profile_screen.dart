@@ -162,7 +162,7 @@ class _FavoriteCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
               child: Stack(children: [
-                const Positioned.fill(child: FoodImage()),
+                Positioned.fill(child: FoodImage(imageUrl: item.imageUrl)),
                 Positioned(
                   right: 4,
                   top: 4,

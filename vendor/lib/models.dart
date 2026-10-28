@@ -22,17 +22,19 @@ class Shop {
   final bool isOpen;
   final bool openNow;
   final int queueCount;
+  final String? promptpayId;
 
   Shop({
     required this.id, required this.code, required this.name, required this.description, required this.category,
     required this.openTime, required this.closeTime, required this.prepMin, required this.prepMax,
-    required this.isOpen, required this.openNow, required this.queueCount,
+    required this.isOpen, required this.openNow, required this.queueCount, this.promptpayId,
   });
 
   factory Shop.fromJson(Map<String, dynamic> j) => Shop(
         id: j['id'], code: j['code'], name: j['name'], description: j['description'] ?? '', category: j['category'],
         openTime: j['open_time'], closeTime: j['close_time'], prepMin: j['prep_min'], prepMax: j['prep_max'],
         isOpen: j['is_open'] == true, openNow: j['open_now'] == true, queueCount: j['queue_count'] ?? 0,
+        promptpayId: j['promptpay_id'],
       );
 }
 
@@ -43,12 +45,13 @@ class MenuItem {
   final int price;
   final bool isAvailable;
   final int sortOrder;
+  final String? imageUrl;
 
-  MenuItem({required this.id, required this.name, required this.description, required this.price, required this.isAvailable, required this.sortOrder});
+  MenuItem({required this.id, required this.name, required this.description, required this.price, required this.isAvailable, required this.sortOrder, this.imageUrl});
 
   factory MenuItem.fromJson(Map<String, dynamic> j) => MenuItem(
         id: j['id'], name: j['name'], description: j['description'] ?? '', price: j['price'],
-        isAvailable: j['is_available'] == true, sortOrder: j['sort_order'] ?? 0,
+        isAvailable: j['is_available'] == true, sortOrder: j['sort_order'] ?? 0, imageUrl: j['image_url'],
       );
 }
 
@@ -70,10 +73,15 @@ class Order {
   final int total;
   final String? cancelReason;
   final DateTime createdAt;
+  final String paymentMethod; // cash | promptpay
+  final String paymentStatus; // unpaid | slip_uploaded | paid | rejected
+  final bool hasSlip;
+  final String? paymentNote;
 
   Order({
     required this.id, required this.queueNo, required this.status, required this.customer, required this.items,
     required this.pickupTime, required this.note, required this.total, this.cancelReason, required this.createdAt,
+    this.paymentMethod = 'cash', this.paymentStatus = 'unpaid', this.hasSlip = false, this.paymentNote,
   });
 
   factory Order.fromJson(Map<String, dynamic> j) => Order(
@@ -81,6 +89,8 @@ class Order {
         items: (j['items'] as List).map((e) => OrderLine(e['name'], e['qty'], e['price'])).toList(),
         pickupTime: j['pickup_time'], note: j['note'] ?? '', total: j['total'], cancelReason: j['cancel_reason'],
         createdAt: DateTime.parse(j['created_at']).toLocal(),
+        paymentMethod: j['payment_method'] ?? 'cash', paymentStatus: j['payment_status'] ?? 'unpaid',
+        hasSlip: j['has_slip'] == true, paymentNote: j['payment_note'],
       );
 }
 

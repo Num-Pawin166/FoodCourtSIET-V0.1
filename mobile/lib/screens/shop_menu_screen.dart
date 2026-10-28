@@ -91,7 +91,7 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
                   opacity: m.isAvailable ? 1 : 0.5,
                   child: Row(children: [
                     Stack(children: [
-                      const FoodImage(width: 76, height: 66),
+                      FoodImage(width: 76, height: 66, imageUrl: m.imageUrl),
                       Positioned(
                         right: 0,
                         top: 0,

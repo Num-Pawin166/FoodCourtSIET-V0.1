@@ -139,8 +139,33 @@ CREATE TABLE IF NOT EXISTS favorites (
   PRIMARY KEY (user_id, menu_item_id)
 );
 `);
-  // migration: อีเมลสำหรับล็อกอินด้วย Google (DB เก่าที่สร้างก่อนมีคอลัมน์นี้)
-  const cols = await db.all('PRAGMA table_info(users)');
-  if (!cols.some((c) => c.name === 'email')) await db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+  // รูปภาพ (รูปเมนู + สลิปโอนเงิน) เก็บใน DB เพราะดิสก์ของ Render แบบฟรีหายทุกครั้งที่ deploy
+  await db.exec(`
+CREATE TABLE IF NOT EXISTS images (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind        TEXT NOT NULL CHECK (kind IN ('menu','slip')),
+  mime        TEXT NOT NULL,
+  data        BLOB NOT NULL,
+  uploaded_by INTEGER,
+  created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);`);
+
+  // migrations: คอลัมน์ที่เพิ่มทีหลัง (DB เก่าจะได้รับคอลัมน์ใหม่อัตโนมัติ)
+  await addColumns('users', { email: 'TEXT' });
   await db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
+  await addColumns('shops', { promptpay_id: 'TEXT' });
+  await addColumns('orders', {
+    payment_method: "TEXT NOT NULL DEFAULT 'cash'",     // cash = จ่ายที่ร้าน | promptpay = โอน
+    payment_status: "TEXT NOT NULL DEFAULT 'unpaid'",   // unpaid | slip_uploaded | paid | rejected
+    slip_image_id: 'INTEGER',
+    payment_note: 'TEXT',                                // เหตุผลที่ร้านปฏิเสธสลิป
+    paid_at: 'TEXT',
+  });
+}
+
+async function addColumns(table, defs) {
+  const existing = new Set((await db.all(`PRAGMA table_info(${table})`)).map((c) => c.name));
+  for (const [col, type] of Object.entries(defs)) {
+    if (!existing.has(col)) await db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+  }
 }

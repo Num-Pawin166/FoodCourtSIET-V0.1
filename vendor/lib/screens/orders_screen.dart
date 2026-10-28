@@ -94,6 +94,73 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  /// ดูสลิป + ยืนยัน/ปฏิเสธ (โอน) หรือบันทึกว่ารับเงินสดแล้ว (จ่ายที่ร้าน)
+  Future<void> _showPayment(Order o) async {
+    final api = context.read<AppState>().api;
+    final action = await showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text('การชำระเงิน ${o.queueNo} · ${baht(o.total)}'),
+        contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+        content: SizedBox(
+          width: 360,
+          child: o.hasSlip
+              ? FutureBuilder<List<int>>(
+                  future: api.slipBytes(o.id),
+                  builder: (_, snap) => snap.hasData
+                      ? InteractiveViewer(child: Image.memory(Uint8List.fromList(snap.data!), fit: BoxFit.contain))
+                      : snap.hasError
+                          ? Text('โหลดสลิปไม่ได้: ${snap.error}')
+                          : const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: AppColors.pink))),
+                )
+              : Text(o.paymentMethod == 'cash' ? 'ลูกค้าเลือกจ่ายที่ร้าน' : 'ลูกค้ายังไม่ได้แนบสลิป'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('ปิด')),
+          if (o.paymentStatus == 'slip_uploaded')
+            TextButton(
+              onPressed: () => Navigator.pop(c, 'reject'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.red),
+              child: const Text('สลิปไม่ถูกต้อง'),
+            ),
+          if (o.paymentStatus != 'paid' && (o.paymentMethod == 'cash' || o.paymentStatus == 'slip_uploaded'))
+            FilledButton(
+              onPressed: () => Navigator.pop(c, 'confirm'),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.green),
+              child: Text(o.paymentMethod == 'cash' ? 'รับเงินสดแล้ว' : 'ยืนยันรับเงิน'),
+            ),
+        ],
+      ),
+    );
+    if (action == null || !mounted) return;
+    String? reason;
+    if (action == 'reject') {
+      final ctrl = TextEditingController(text: 'ยอดเงินไม่ตรง');
+      reason = await showDialog<String>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('เหตุผลที่สลิปไม่ผ่าน'),
+          content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'ลูกค้าจะเห็นข้อความนี้')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(c), child: const Text('ยกเลิก')),
+            FilledButton(onPressed: () => Navigator.pop(c, ctrl.text.trim()), child: const Text('ส่ง')),
+          ],
+        ),
+      );
+      if (reason == null || !mounted) return;
+    }
+    setState(() => _busy.add(o.id));
+    try {
+      await api.setPayment(o.id, action, reason: reason);
+      await _load();
+      if (mounted) showMsg(context, action == 'confirm' ? 'บันทึกรับเงินแล้ว' : 'แจ้งลูกค้าให้แนบสลิปใหม่แล้ว');
+    } catch (e) {
+      if (mounted) showMsg(context, e, error: true);
+    } finally {
+      if (mounted) setState(() => _busy.remove(o.id));
+    }
+  }
+
   Future<String?> _askReason(Order o) {
     final ctrl = TextEditingController(text: 'วัตถุดิบหมด');
     return showDialog<String>(
@@ -198,6 +265,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
               highlight: _highlight.contains(o.id),
               busy: _busy.contains(o.id),
               onStatus: (s) => _setStatus(o, s),
+              onPayment: () => _showPayment(o),
             ),
             const SizedBox(height: 12),
           ],
@@ -230,7 +298,8 @@ class _OrderCard extends StatelessWidget {
   final bool highlight;
   final bool busy;
   final void Function(String status) onStatus;
-  const _OrderCard({required this.order, required this.highlight, required this.busy, required this.onStatus});
+  final VoidCallback onPayment;
+  const _OrderCard({required this.order, required this.highlight, required this.busy, required this.onStatus, required this.onPayment});
 
   static const _actions = {
     'pending': [('accepted', 'รับออเดอร์'), ('cancelled', 'ปฏิเสธ')],
@@ -296,6 +365,8 @@ class _OrderCard extends StatelessWidget {
             child: Text('ยกเลิก: ${order.cancelReason}', style: const TextStyle(color: AppColors.red, fontSize: 12)),
           ),
         const SizedBox(height: 10),
+        _PaymentChip(order: order, onTap: onPayment),
+        const SizedBox(height: 8),
         Row(children: [
           Text(baht(order.total), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
           const Spacer(),
@@ -318,6 +389,43 @@ class _OrderCard extends StatelessWidget {
             ],
         ]),
       ]),
+    );
+  }
+}
+
+/// สถานะชำระเงินบนการ์ดออเดอร์ (แตะเพื่อดูสลิป/ยืนยัน)
+class _PaymentChip extends StatelessWidget {
+  final Order order;
+  final VoidCallback onTap;
+  const _PaymentChip({required this.order, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final promptpay = order.paymentMethod == 'promptpay';
+    final (label, color, icon) = switch (order.paymentStatus) {
+      'paid' => ('ชำระเงินแล้ว', AppColors.green, Icons.check_circle),
+      'slip_uploaded' => ('สลิปรอตรวจ · แตะเพื่อดู', const Color(0xFFA86400), Icons.receipt_long),
+      'rejected' => ('สลิปไม่ผ่าน · รอลูกค้าแนบใหม่', AppColors.red, Icons.error_outline),
+      _ => promptpay ? ('โอนพร้อมเพย์ · รอลูกค้าโอน', AppColors.ink2, Icons.qr_code_2) : ('จ่ายที่ร้าน', AppColors.ink2, Icons.payments_outlined),
+    };
+    final highlight = order.paymentStatus == 'slip_uploaded';
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: highlight ? const Color(0xFFFFF1D6) : color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 6),
+          Expanded(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13))),
+          Icon(Icons.chevron_right, size: 18, color: color),
+        ]),
+      ),
     );
   }
 }

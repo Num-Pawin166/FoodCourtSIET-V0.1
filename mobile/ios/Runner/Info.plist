@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ใช้เลือกรูปสลิปโอนเงินเพื่อแนบกับคำสั่งซื้อ</string>
+	<key>NSCameraUsageDescription</key>
+	<string>ใช้ถ่ายรูปสลิปโอนเงิน</string>
 </dict>
 </plist>

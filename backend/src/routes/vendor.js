@@ -4,6 +4,8 @@ import {
   HttpError, auth, serializeOrder, serializeOrders, serializeOneShop, serializeMenuItem, NEXT_STATUS,
   localDate, isHHMM, requireInt,
 } from '../util.js';
+import { normalizePromptPayId } from '../promptpay.js';
+import { rawImage, storeImage, sendImage, imageUrl } from '../images.js';
 
 // หลังบ้านของ "ร้านค้า" — ทุก endpoint ผูกกับร้านของบัญชีที่ล็อกอิน
 const r = Router();
@@ -15,7 +17,9 @@ r.use(auth('vendor'), async (req, _res, next) => {
 });
 
 // ---------- ข้อมูลร้าน ----------
-r.get('/shop', async (req, res) => res.json(await serializeOneShop(req.shop)));
+const shopForOwner = async (s) => ({ ...(await serializeOneShop(s)), promptpay_id: s.promptpay_id ?? null });
+
+r.get('/shop', async (req, res) => res.json(await shopForOwner(req.shop)));
 
 r.patch('/shop', async (req, res) => {
   const b = req.body || {};
@@ -28,11 +32,18 @@ r.patch('/shop', async (req, res) => {
   if (b.prep_max !== undefined) s.prep_max = requireInt(b.prep_max, 'prep_max');
   if (s.open_time >= s.close_time) throw new HttpError(400, 'เวลาเปิดต้องก่อนเวลาปิด');
   if (s.prep_min < 0 || s.prep_max < s.prep_min) throw new HttpError(400, 'เวลารอไม่ถูกต้อง');
+  if (b.promptpay_id !== undefined) {
+    if (b.promptpay_id === null || String(b.promptpay_id).trim() === '') s.promptpay_id = null; // ปิดรับโอน
+    else {
+      s.promptpay_id = normalizePromptPayId(b.promptpay_id);
+      if (!s.promptpay_id) throw new HttpError(400, 'หมายเลขพร้อมเพย์ต้องเป็นเบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก');
+    }
+  }
   await db.run(
-    `UPDATE shops SET description=?, is_open=?, open_time=?, close_time=?, prep_min=?, prep_max=? WHERE id=?`,
-    s.description, s.is_open, s.open_time, s.close_time, s.prep_min, s.prep_max, s.id,
+    `UPDATE shops SET description=?, is_open=?, open_time=?, close_time=?, prep_min=?, prep_max=?, promptpay_id=? WHERE id=?`,
+    s.description, s.is_open, s.open_time, s.close_time, s.prep_min, s.prep_max, s.promptpay_id ?? null, s.id,
   );
-  res.json(await serializeOneShop(await db.get('SELECT * FROM shops WHERE id = ?', s.id)));
+  res.json(await shopForOwner(await db.get('SELECT * FROM shops WHERE id = ?', s.id)));
 });
 
 // ---------- ออเดอร์ ----------
@@ -60,6 +71,32 @@ r.patch('/orders/:id/status', async (req, res) => {
   res.json(await serializeOrder(await db.get('SELECT * FROM orders WHERE id = ?', o.id)));
 });
 
+// ---------- การชำระเงิน ----------
+// PATCH /vendor/orders/:id/payment { action: 'confirm' | 'reject', reason? }
+r.patch('/orders/:id/payment', async (req, res) => {
+  const o = await db.get('SELECT * FROM orders WHERE id = ? AND shop_id = ?', requireInt(req.params.id, 'id'), req.shop.id);
+  if (!o) throw new HttpError(404, 'ไม่พบออเดอร์นี้');
+  const { action, reason } = req.body || {};
+  if (action === 'confirm') {
+    // ยืนยันได้ทั้งออเดอร์โอน (หลังดูสลิป) และออเดอร์จ่ายที่ร้าน (รับเงินสดแล้ว)
+    if (o.payment_status === 'paid') throw new HttpError(409, 'ยืนยันรับเงินไปแล้ว');
+    await db.run(`UPDATE orders SET payment_status = 'paid', paid_at = ?, payment_note = NULL WHERE id = ?`, new Date().toISOString(), o.id);
+  } else if (action === 'reject') {
+    if (o.payment_method !== 'promptpay' || o.payment_status !== 'slip_uploaded') throw new HttpError(409, 'ไม่มีสลิปที่รอตรวจ');
+    await db.run(`UPDATE orders SET payment_status = 'rejected', payment_note = ? WHERE id = ?`,
+      String(reason || 'สลิปไม่ถูกต้อง กรุณาแนบใหม่').slice(0, 200), o.id);
+  } else {
+    throw new HttpError(400, 'action ต้องเป็น confirm หรือ reject');
+  }
+  res.json(await serializeOrder(await db.get('SELECT * FROM orders WHERE id = ?', o.id)));
+});
+
+r.get('/orders/:id/slip', async (req, res) => {
+  const o = await db.get('SELECT slip_image_id FROM orders WHERE id = ? AND shop_id = ?', requireInt(req.params.id, 'id'), req.shop.id);
+  if (!o?.slip_image_id) throw new HttpError(404, 'ไม่พบสลิป');
+  await sendImage(res, o.slip_image_id, 'slip');
+});
+
 // ---------- เมนู ----------
 r.get('/menu', async (req, res) => {
   res.json((await db.all('SELECT * FROM menu_items WHERE shop_id = ? ORDER BY sort_order, id', req.shop.id)).map(serializeMenuItem));
@@ -78,7 +115,6 @@ function validateMenu(b, partial) {
   }
   if (b.description !== undefined) out.description = String(b.description).slice(0, 200);
   if (b.is_available !== undefined) out.is_available = b.is_available ? 1 : 0;
-  if (b.image_url !== undefined) out.image_url = b.image_url ? String(b.image_url) : null;
   if (b.sort_order !== undefined) out.sort_order = requireInt(b.sort_order, 'sort_order');
   return out;
 }
@@ -103,14 +139,43 @@ r.patch('/menu/:id', async (req, res) => {
 
 r.delete('/menu/:id', async (req, res) => {
   const id = requireInt(req.params.id, 'id');
-  if (!(await db.get('SELECT 1 FROM menu_items WHERE id = ? AND shop_id = ?', id, req.shop.id))) throw new HttpError(404, 'ไม่พบเมนูนี้');
+  const m = await db.get('SELECT image_url FROM menu_items WHERE id = ? AND shop_id = ?', id, req.shop.id);
+  if (!m) throw new HttpError(404, 'ไม่พบเมนูนี้');
   // ลบข้อมูลที่อ้างถึงเมนูนี้เอง (ไม่พึ่ง foreign key cascade ซึ่งอาจไม่เปิดบน Turso)
   await db.batch([
     { sql: 'DELETE FROM favorites WHERE menu_item_id = ?', args: [id] },
     { sql: 'UPDATE order_items SET menu_item_id = NULL WHERE menu_item_id = ?', args: [id] },
     { sql: 'DELETE FROM menu_items WHERE id = ?', args: [id] },
+    ...imageDeletes(m.image_url),
   ]);
   res.json({ ok: true });
+});
+
+// รูปเมนู: POST /vendor/menu/:id/image (body = ไฟล์รูป) / DELETE เพื่อลบรูป
+const menuImageId = (url) => Number(/^\/api\/images\/(\d+)$/.exec(url || '')?.[1]) || null;
+const imageDeletes = (url) => (menuImageId(url) ? [{ sql: `DELETE FROM images WHERE id = ? AND kind = 'menu'`, args: [menuImageId(url)] }] : []);
+
+r.post('/menu/:id/image', rawImage, async (req, res) => {
+  const id = requireInt(req.params.id, 'id');
+  const m = await db.get('SELECT image_url FROM menu_items WHERE id = ? AND shop_id = ?', id, req.shop.id);
+  if (!m) throw new HttpError(404, 'ไม่พบเมนูนี้');
+  const imageId = await storeImage(req, 'menu');
+  await db.batch([
+    { sql: 'UPDATE menu_items SET image_url = ? WHERE id = ?', args: [imageUrl(imageId), id] },
+    ...imageDeletes(m.image_url),
+  ]);
+  res.json(serializeMenuItem(await db.get('SELECT * FROM menu_items WHERE id = ?', id)));
+});
+
+r.delete('/menu/:id/image', async (req, res) => {
+  const id = requireInt(req.params.id, 'id');
+  const m = await db.get('SELECT image_url FROM menu_items WHERE id = ? AND shop_id = ?', id, req.shop.id);
+  if (!m) throw new HttpError(404, 'ไม่พบเมนูนี้');
+  await db.batch([
+    { sql: 'UPDATE menu_items SET image_url = NULL WHERE id = ?', args: [id] },
+    ...imageDeletes(m.image_url),
+  ]);
+  res.json(serializeMenuItem(await db.get('SELECT * FROM menu_items WHERE id = ?', id)));
 });
 
 // ---------- สรุปยอดวันนี้ ----------

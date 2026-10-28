@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'config.dart';
 import 'theme.dart';
 
 String baht(int n) {
@@ -53,19 +54,35 @@ class PageHeader extends StatelessWidget {
 }
 
 /// รูปอาหาร (ยังไม่มีรูปจริง ใช้กล่องสีชมพูอ่อน + ไอคอน)
+/// รูปอาหาร: ถ้ามี imageUrl (path จาก API เช่น /api/images/12) แสดงรูปจริง ไม่งั้นใช้ไอคอนบนพื้นชมพู
 class FoodImage extends StatelessWidget {
   final double width;
   final double height;
   final IconData icon;
-  const FoodImage({super.key, this.width = 72, this.height = 72, this.icon = Icons.rice_bowl_outlined});
+  final String? imageUrl;
+  const FoodImage({super.key, this.width = 72, this.height = 72, this.icon = Icons.rice_bowl_outlined, this.imageUrl});
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: width,
-        height: height,
-        decoration: BoxDecoration(color: AppColors.pinkSoft, borderRadius: BorderRadius.circular(12)),
-        child: Icon(icon, color: AppColors.pink, size: (height * 0.4).clamp(18, 48)),
-      );
+  Widget build(BuildContext context) {
+    final placeholder = Icon(icon, color: AppColors.pink, size: (height * 0.4).clamp(18, 48));
+    final url = resolveUrl(imageUrl);
+    return Container(
+      width: width,
+      height: height,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: AppColors.pinkSoft, borderRadius: BorderRadius.circular(12)),
+      child: url == null
+          ? placeholder
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              width: width,
+              height: height,
+              errorBuilder: (_, _, _) => placeholder,
+              loadingBuilder: (_, child, progress) => progress == null ? child : Center(child: placeholder),
+            ),
+    );
+  }
 }
 
 class QtyButton extends StatelessWidget {

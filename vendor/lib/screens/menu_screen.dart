@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
@@ -83,7 +85,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
                   child: Row(children: [
-                    Opacity(opacity: m.isAvailable ? 1 : 0.4, child: const FoodImage(width: 56, height: 56)),
+                    Opacity(opacity: m.isAvailable ? 1 : 0.4, child: FoodImage(width: 56, height: 56, imageUrl: m.imageUrl)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -127,6 +129,40 @@ class _MenuFormState extends State<_MenuForm> {
   late final _price = TextEditingController(text: widget.item?.price.toString());
   late bool _available = widget.item?.isAvailable ?? true;
   bool _saving = false;
+  Uint8List? _newImage;    // รูปที่เพิ่งเลือก (ยังไม่อัปโหลด)
+  bool _removeImage = false; // กดลบรูปเดิม
+
+  bool get _hasImage => _newImage != null || (!_removeImage && widget.item?.imageUrl != null);
+
+  Future<void> _pickImage() async {
+    // 'camera' | 'gallery' | 'remove' — null = ปิดแผ่นเฉยๆ (ไม่ทำอะไร)
+    final choice = await showModalBottomSheet<String>(
+      context: context,
+      builder: (c) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('ถ่ายรูป'), onTap: () => Navigator.pop(c, 'camera')),
+          ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('เลือกจากคลังภาพ'), onTap: () => Navigator.pop(c, 'gallery')),
+          if (_hasImage)
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: AppColors.red),
+              title: const Text('ลบรูป', style: TextStyle(color: AppColors.red)),
+              onTap: () => Navigator.pop(c, 'remove'),
+            ),
+        ]),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == 'remove') {
+      setState(() { _newImage = null; _removeImage = true; });
+      return;
+    }
+    final source = choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    // ย่อเหลือ ~1024px คุณภาพ 80 → ไฟล์ราว 100-200 KB โหลดเร็วในแอปลูกค้า
+    final file = await ImagePicker().pickImage(source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 80);
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
+    if (mounted) setState(() { _newImage = bytes; _removeImage = false; });
+  }
 
   @override
   void dispose() {
@@ -143,7 +179,13 @@ class _MenuFormState extends State<_MenuForm> {
     final api = context.read<AppState>().api;
     final body = {'name': _name.text.trim(), 'description': _desc.text.trim(), 'price': price, 'is_available': _available};
     try {
-      widget.item == null ? await api.createMenu(body) : await api.updateMenu(widget.item!.id, body);
+      final id = widget.item == null ? (await api.createMenuItem(body)).id : widget.item!.id;
+      if (widget.item != null) await api.updateMenu(id, body);
+      if (_newImage != null) {
+        await api.uploadMenuImage(id, _newImage!);
+      } else if (_removeImage && widget.item?.imageUrl != null) {
+        await api.deleteMenuImage(id);
+      }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) showMsg(context, e, error: true);
@@ -172,15 +214,59 @@ class _MenuFormState extends State<_MenuForm> {
     }
   }
 
+  /// ช่องรูปเมนู: แตะเพื่อถ่าย/เลือก/ลบรูป
+  Widget _imageBox() {
+    final Widget content;
+    if (_newImage != null) {
+      content = Image.memory(_newImage!, fit: BoxFit.cover);
+    } else if (_hasImage) {
+      content = FoodImage(width: 140, height: 140, imageUrl: widget.item!.imageUrl);
+    } else {
+      content = const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.add_a_photo_outlined, color: AppColors.accent, size: 32),
+        SizedBox(height: 6),
+        Text('เพิ่มรูปเมนู', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600)),
+      ]);
+    }
+    return GestureDetector(
+      onTap: _saving ? null : _pickImage,
+      child: Stack(children: [
+        Container(
+          width: 140,
+          height: 140,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AppColors.pinkSoft,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.pink, width: 1.5),
+          ),
+          child: content,
+        ),
+        if (_hasImage)
+          Positioned(
+            right: 6,
+            bottom: 6,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+              child: const Icon(Icons.edit, size: 16, color: AppColors.accent),
+            ),
+          ),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(child: Text(widget.item == null ? 'เพิ่มเมนู' : 'แก้ไขเมนู', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600))),
           if (widget.item != null) IconButton(onPressed: _delete, icon: const Icon(Icons.delete_outline, color: AppColors.red)),
         ]),
+        const SizedBox(height: 12),
+        Center(child: _imageBox()),
         const SizedBox(height: 12),
         TextField(controller: _name, decoration: const InputDecoration(hintText: 'ชื่อเมนู เช่น ข้าวขาหมู')),
         const SizedBox(height: 10),

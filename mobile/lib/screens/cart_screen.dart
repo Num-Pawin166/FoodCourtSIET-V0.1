@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'payment_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -16,6 +18,7 @@ class _CartScreenState extends State<CartScreen> {
   List<String>? _slots;
   String? _slot;
   bool _submitting = false;
+  String _payment = 'promptpay'; // promptpay | cash (ร้านที่ไม่มีพร้อมเพย์จะใช้ cash เสมอ)
 
   @override
   void initState() {
@@ -46,6 +49,8 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  String _method(AppState state) => state.cartShop?.promptpayEnabled == true ? _payment : 'cash';
+
   Future<void> _submit() async {
     final state = context.read<AppState>();
     if (_slot == null) return showMsg(context, 'กรุณาเลือกเวลารับอาหาร', error: true);
@@ -56,11 +61,18 @@ class _CartScreenState extends State<CartScreen> {
         items: Map.of(state.cartQty),
         pickupTime: _slot!,
         note: _note.text.trim(),
+        paymentMethod: _method(state),
       );
       state.clearCart();
       state.goTab(2);
       if (!mounted) return;
-      Navigator.of(context).popUntil((r) => r.isFirst);
+      if (order.isPromptPay) {
+        // ไปหน้าโอนเงินทันที (กดย้อนกลับแล้วจะอยู่หน้าคำสั่งซื้อ)
+        Navigator.of(context).popUntil((r) => r.isFirst);
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaymentScreen(orderId: order.id)));
+      } else {
+        Navigator.of(context).popUntil((r) => r.isFirst);
+      }
       showMsg(context, 'สั่งอาหารสำเร็จ! หมายเลขคิว ${order.queueNo}');
     } catch (e) {
       if (!mounted) return;
@@ -112,6 +124,10 @@ class _CartScreenState extends State<CartScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 22),
+                    const Text('วิธีชำระเงิน', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 10),
+                    _paymentPicker(state),
                     const SizedBox(height: 22),
                     _summary(state),
                   ]),
@@ -196,6 +212,47 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
+  Widget _paymentPicker(AppState state) {
+    final hasPromptPay = state.cartShop?.promptpayEnabled == true;
+    Widget option(String value, IconData icon, String title, String subtitle, {bool enabled = true}) {
+      final selected = _method(state) == value;
+      return Opacity(
+        opacity: enabled ? 1 : 0.45,
+        child: GestureDetector(
+          onTap: enabled ? () => setState(() => _payment = value) : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: selected ? AppColors.accent : AppColors.line, width: selected ? 2 : 1),
+              boxShadow: cardShadow,
+            ),
+            child: Row(children: [
+              Icon(icon, color: selected ? AppColors.accent : AppColors.ink2),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: const TextStyle(fontSize: 11, color: AppColors.muted)),
+                ]),
+              ),
+              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off, color: selected ? AppColors.accent : AppColors.muted),
+            ]),
+          ),
+        ),
+      );
+    }
+
+    return Column(children: [
+      option('promptpay', Icons.qr_code_2, 'โอนพร้อมเพย์',
+          hasPromptPay ? 'สแกน QR แล้วแนบสลิป' : 'ร้านนี้ยังไม่รับโอน', enabled: hasPromptPay),
+      const SizedBox(height: 8),
+      option('cash', Icons.payments_outlined, 'จ่ายที่ร้าน', 'ชำระตอนรับอาหาร'),
+    ]);
+  }
+
   Widget _summary(AppState state) {
     Widget line(String a, String b, {bool bold = false}) => Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
@@ -210,10 +267,9 @@ class _CartScreenState extends State<CartScreen> {
       child: Column(children: [
         line('รวม ${state.cartCount} รายการ', baht(state.cartTotal)),
         line('รับอาหารเวลา', _slot == null ? '-' : '$_slot น.'),
+        line('ชำระเงิน', _method(state) == 'promptpay' ? 'โอนพร้อมเพย์' : 'จ่ายที่ร้าน'),
         const Divider(color: AppColors.ink2, height: 18),
         line('ยอดชำระ', baht(state.cartTotal), bold: true),
-        const SizedBox(height: 4),
-        const Text('ชำระเงินที่ร้านตอนรับอาหาร', style: TextStyle(fontSize: 11, color: AppColors.muted)),
       ]),
     );
   }

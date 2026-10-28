@@ -94,7 +94,7 @@ export async function seedIfEmpty() {
 // `npm run seed` = ล้างข้อมูลทั้งหมดแล้วใส่ข้อมูลตัวอย่างใหม่
 if (process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('src/seed.js')) {
   await initSchema();
-  await db.batch(['favorites', 'order_items', 'orders', 'menu_items', 'users', 'shops'].map((t) => ({ sql: `DELETE FROM ${t}` })));
+  await db.batch(['favorites', 'order_items', 'orders', 'menu_items', 'images', 'users', 'shops'].map((t) => ({ sql: `DELETE FROM ${t}` })));
   await db.exec('DELETE FROM sqlite_sequence').catch(() => {});
   const n = await seedAll();
   console.log(`Database reset with demo data (${n} rows) -> ${isRemote ? 'Turso' : DB_URL}`);

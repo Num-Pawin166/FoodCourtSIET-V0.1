@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { HttpError, auth, serializeShops, serializeOneShop, serializeMenuItem, pickupSlots, requireInt } from '../util.js';
+import { sendImage } from '../images.js';
 
 const r = Router();
 
@@ -42,6 +43,9 @@ r.get('/shops/:id/slots', async (req, res) => {
   if (!shop) throw new HttpError(404, 'ไม่พบร้านนี้');
   res.json(pickupSlots(shop));
 });
+
+// รูปเมนู (สาธารณะ) — สลิปดูได้เฉพาะผ่าน /orders/:id/slip และ /vendor/orders/:id/slip
+r.get('/images/:id', async (req, res) => sendImage(res, requireInt(req.params.id, 'id'), 'menu'));
 
 // ---------- เมนูโปรด ----------
 r.get('/favorites', auth(), async (req, res) => {

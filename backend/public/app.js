@@ -31,6 +31,27 @@ async function api(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+/** อัปโหลดไฟล์รูปดิบ (server ตรวจชนิดไฟล์จากเนื้อไฟล์) */
+async function apiUpload(path, file) {
+  const res = await fetch(API + path, { method: 'POST', headers: { Authorization: `Bearer ${state.token}`, 'Content-Type': 'application/octet-stream' }, body: file });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'อัปโหลดไม่สำเร็จ');
+  return data;
+}
+/** รูปที่ต้องล็อกอินถึงดูได้ (สลิป) → object URL สำหรับ <img> */
+async function apiImageUrl(path) {
+  const res = await fetch(API + path, { headers: { Authorization: `Bearer ${state.token}` } });
+  if (!res.ok) throw new Error('โหลดรูปไม่ได้');
+  return URL.createObjectURL(await res.blob());
+}
+const PAY = {
+  paid: ['ชำระแล้ว', 'st-completed'], slip_uploaded: ['สลิปรอตรวจ', 'st-pending'], rejected: ['สลิปไม่ผ่าน', 'st-cancelled'],
+};
+const payPill = (o) => {
+  const [label, cls] = PAY[o.payment_status] || (o.payment_method === 'promptpay' ? ['รอโอน', 'st-accepted'] : ['จ่ายที่ร้าน', 'st-role']);
+  return `<span class="pill ${cls}">${o.payment_method === 'promptpay' ? '📱 ' : '💵 '}${label}</span>`;
+};
+
 function toast(msg, isErr = false) {
   const t = $('#toast');
   t.textContent = msg;
@@ -58,6 +79,10 @@ function openModal({ title, fields, submitText = 'บันทึก', onSubmit 
       return `<label class="row"><span class="switch"><input type="checkbox" name="${f.name}" ${v ? 'checked' : ''}><span></span></span>${esc(f.label)}</label>`;
     }
     if (f.type === 'pair') return `<div class="grid2">${f.items.map((x) => fieldInput(x)).join('')}</div>`;
+    if (f.type === 'file') {
+      return `<label>${esc(f.label)}${f.preview ? `<img src="${esc(f.preview)}" style="width:96px;height:96px;object-fit:cover;border-radius:12px">` : ''}
+        <input type="file" name="${f.name}" accept="image/jpeg,image/png,image/webp"></label>`;
+    }
     return fieldInput(f);
   }).join('') + `<p class="error" id="modal-error"></p>
     <div class="foot"><button type="button" class="btn ghost" value="cancel" id="modal-cancel">ยกเลิก</button>
@@ -70,7 +95,7 @@ function openModal({ title, fields, submitText = 'บันทึก', onSubmit 
     const all = fields.flatMap((f) => (f.type === 'pair' ? f.items : [f]));
     for (const f of all) {
       const el = form.elements[f.name];
-      data[f.name] = f.type === 'checkbox' ? el.checked : f.type === 'number' ? (el.value === '' ? undefined : Number(el.value)) : el.value;
+      data[f.name] = f.type === 'checkbox' ? el.checked : f.type === 'file' ? el.files[0] : f.type === 'number' ? (el.value === '' ? undefined : Number(el.value)) : el.value;
     }
     try { await onSubmit(data); dlg.close(); } catch (err) { $('#modal-error').textContent = err.message; }
   };
@@ -210,6 +235,8 @@ function renderBoard(orders, highlight) {
           <div class="meta">${esc(o.user.name)} · สั่งเมื่อ ${fmtTime(o.created_at)}</div>
           <ul>${o.items.map((i) => `<li>${esc(i.name)} × ${i.qty}</li>`).join('')}</ul>
           ${o.note ? `<div class="note">📝 ${esc(o.note)}</div>` : ''}
+          <div class="row" style="margin-bottom:8px">${payPill(o)}
+            ${o.payment_status !== 'paid' || o.has_slip ? `<button class="btn sm ghost" data-pay="${o.id}">${o.has_slip ? 'ดูสลิป' : 'รับเงิน'}</button>` : ''}</div>
           <div class="row" style="justify-content:space-between">
             <b>${baht(o.total)}</b>
             <div class="actions">${ACTIONS[st].map(([to, label, cls]) =>
@@ -219,6 +246,37 @@ function renderBoard(orders, highlight) {
     </div>`;
   }).join('');
   board.querySelectorAll('button[data-to]').forEach((b) => (b.onclick = () => changeStatus(Number(b.dataset.id), b.dataset.to)));
+  board.querySelectorAll('button[data-pay]').forEach((b) => (b.onclick = () => showPayment(orders.find((o) => o.id === Number(b.dataset.pay)))));
+}
+
+/** ดูสลิป + ยืนยัน/ปฏิเสธ หรือบันทึกรับเงินสด */
+async function showPayment(o) {
+  const dlg = $('#modal');
+  const form = $('#modal-form');
+  const canConfirm = o.payment_status !== 'paid' && (o.payment_method === 'cash' || o.payment_status === 'slip_uploaded');
+  form.innerHTML = `<h2>การชำระเงิน ${esc(o.queue_no)} · ${baht(o.total)}</h2>
+    <div>${payPill(o)}</div>
+    <div id="slip-box" class="muted">${o.has_slip ? 'กำลังโหลดสลิป...' : (o.payment_method === 'cash' ? 'ลูกค้าเลือกจ่ายที่ร้าน' : 'ลูกค้ายังไม่ได้แนบสลิป')}</div>
+    <p class="error" id="modal-error"></p>
+    <div class="foot"><button type="button" class="btn ghost" id="pay-close">ปิด</button>
+      ${o.payment_status === 'slip_uploaded' ? '<button type="button" class="btn danger" id="pay-reject">สลิปไม่ถูกต้อง</button>' : ''}
+      ${canConfirm ? `<button type="button" class="btn primary" id="pay-confirm">${o.payment_method === 'cash' ? 'รับเงินสดแล้ว' : 'ยืนยันรับเงิน'}</button>` : ''}</div>`;
+  $('#pay-close').onclick = () => dlg.close();
+  const act = async (action, reason) => {
+    try {
+      await api(`/vendor/orders/${o.id}/payment`, { method: 'PATCH', body: { action, reason } });
+      dlg.close(); toast(action === 'confirm' ? 'บันทึกรับเงินแล้ว' : 'แจ้งลูกค้าให้แนบสลิปใหม่แล้ว'); PAGES.orders();
+    } catch (e) { $('#modal-error').textContent = e.message; }
+  };
+  if ($('#pay-confirm')) $('#pay-confirm').onclick = () => act('confirm');
+  if ($('#pay-reject')) $('#pay-reject').onclick = () => { const r = prompt('เหตุผล (ลูกค้าจะเห็น)', 'ยอดเงินไม่ตรง'); if (r !== null) act('reject', r); };
+  dlg.showModal();
+  if (o.has_slip) {
+    try {
+      const url = await apiImageUrl(`/vendor/orders/${o.id}/slip`);
+      $('#slip-box').innerHTML = `<img src="${url}" alt="สลิป" style="max-width:100%;max-height:60vh;border-radius:12px;display:block;margin:auto">`;
+    } catch (e) { $('#slip-box').textContent = e.message; }
+  }
 }
 
 async function changeStatus(id, to) {
@@ -234,9 +292,9 @@ async function changeStatus(id, to) {
 
 async function renderTodayTable() {
   const rows = await api('/vendor/orders?scope=today');
-  $('#today-table').innerHTML = rows.length ? `<table><thead><tr><th>คิว</th><th>เวลาสั่ง</th><th>เวลารับ</th><th>ลูกค้า</th><th>รายการ</th><th class="num">ยอด</th><th>สถานะ</th></tr></thead><tbody>
+  $('#today-table').innerHTML = rows.length ? `<table><thead><tr><th>คิว</th><th>เวลาสั่ง</th><th>เวลารับ</th><th>ลูกค้า</th><th>รายการ</th><th class="num">ยอด</th><th>ชำระเงิน</th><th>สถานะ</th></tr></thead><tbody>
     ${rows.map((o) => `<tr><td><b>${esc(o.queue_no)}</b></td><td>${fmtTime(o.created_at)}</td><td>${esc(o.pickup_time)}</td><td>${esc(o.user.name)}</td>
-      <td>${o.items.map((i) => `${esc(i.name)} ×${i.qty}`).join(', ')}</td><td class="num">${baht(o.total)}</td><td>${pill(o.status)}</td></tr>`).join('')}
+      <td>${o.items.map((i) => `${esc(i.name)} ×${i.qty}`).join(', ')}</td><td class="num">${baht(o.total)}</td><td>${payPill(o)}</td><td>${pill(o.status)}</td></tr>`).join('')}
     </tbody></table>` : '<div class="empty">ยังไม่มีออเดอร์วันนี้</div>';
 }
 
@@ -245,8 +303,8 @@ PAGES.menu = async () => {
   $('#main').innerHTML = `
     <div class="page-head"><div><h1>จัดการเมนู</h1><div class="muted">${menu.length} เมนู · ปิดสวิตช์เมื่อเมนูหมด ลูกค้าจะสั่งไม่ได้</div></div>
       <button class="btn primary" id="add-menu">+ เพิ่มเมนู</button></div>
-    <div class="card table-wrap"><table><thead><tr><th>ชื่อเมนู</th><th>รายละเอียด</th><th class="num">ราคา</th><th>มีขาย</th><th></th></tr></thead><tbody>
-    ${menu.map((m) => `<tr><td><b>${esc(m.name)}</b></td><td class="muted">${esc(m.description)}</td><td class="num">${baht(m.price)}</td>
+    <div class="card table-wrap"><table><thead><tr><th></th><th>ชื่อเมนู</th><th>รายละเอียด</th><th class="num">ราคา</th><th>มีขาย</th><th></th></tr></thead><tbody>
+    ${menu.map((m) => `<tr><td>${m.image_url ? `<img src="${esc(m.image_url)}" alt="" style="width:48px;height:48px;object-fit:cover;border-radius:10px">` : '<div style="width:48px;height:48px;border-radius:10px;background:var(--pink-soft)"></div>'}</td><td><b>${esc(m.name)}</b></td><td class="muted">${esc(m.description)}</td><td class="num">${baht(m.price)}</td>
       <td><label class="switch"><input type="checkbox" data-avail="${m.id}" ${m.is_available ? 'checked' : ''}><span></span></label></td>
       <td class="num"><button class="btn sm" data-edit="${m.id}">แก้ไข</button> <button class="btn sm danger" data-del="${m.id}">ลบ</button></td></tr>`).join('')}
     </tbody></table>${menu.length ? '' : '<div class="empty">ยังไม่มีเมนู</div>'}</div>`;
@@ -256,14 +314,21 @@ PAGES.menu = async () => {
     { name: 'description', label: 'รายละเอียด (เช่น พร้อมน้ำซุป)', type: 'textarea', value: m.description },
     { type: 'pair', items: [{ name: 'price', label: 'ราคา (บาท)', type: 'number', value: m.price, required: true }, { name: 'sort_order', label: 'ลำดับการแสดง', type: 'number', value: m.sort_order ?? 0 }] },
     { name: 'is_available', label: 'มีขาย', type: 'checkbox', value: m.is_available ?? true },
+    { name: 'image', label: m.image_url ? 'เปลี่ยนรูปเมนู (เลือกไฟล์ใหม่)' : 'รูปเมนู (ไม่บังคับ)', type: 'file', preview: m.image_url },
   ];
+  // บันทึกข้อมูลเมนูก่อน แล้วค่อยอัปโหลดรูป (ต้องรู้ id ของเมนู)
+  const saveMenu = async (id, { image, ...d }) => {
+    if (image && image.size > 2 * 1024 * 1024) throw new Error('รูปใหญ่เกิน 2 MB กรุณาย่อรูปก่อน');
+    const saved = id ? await api(`/vendor/menu/${id}`, { method: 'PATCH', body: d }) : await api('/vendor/menu', { method: 'POST', body: d });
+    if (image) await apiUpload(`/vendor/menu/${saved.id}/image`, image);
+  };
   $('#add-menu').onclick = () => openModal({
     title: 'เพิ่มเมนู', fields: form(),
-    onSubmit: async (d) => { await api('/vendor/menu', { method: 'POST', body: d }); toast('เพิ่มเมนูแล้ว'); PAGES.menu(); },
+    onSubmit: async (d) => { await saveMenu(null, d); toast('เพิ่มเมนูแล้ว'); PAGES.menu(); },
   });
   document.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => {
     const m = menu.find((x) => x.id === Number(b.dataset.edit));
-    openModal({ title: 'แก้ไขเมนู', fields: form(m), onSubmit: async (d) => { await api(`/vendor/menu/${m.id}`, { method: 'PATCH', body: d }); toast('บันทึกแล้ว'); PAGES.menu(); } });
+    openModal({ title: 'แก้ไขเมนู', fields: form(m), onSubmit: async (d) => { await saveMenu(m.id, d); toast('บันทึกแล้ว'); PAGES.menu(); } });
   }));
   document.querySelectorAll('[data-del]').forEach((b) => (b.onclick = () => {
     const m = menu.find((x) => x.id === Number(b.dataset.del));
@@ -284,6 +349,8 @@ PAGES.shop = async () => {
         <label>เวลาปิด<input type="time" name="close_time" value="${s.close_time}"></label></div>
       <div class="grid2"><label>เวลารอขั้นต่ำ (นาที)<input type="number" min="0" name="prep_min" value="${s.prep_min}"></label>
         <label>เวลารอสูงสุด (นาที)<input type="number" min="0" name="prep_max" value="${s.prep_max}"></label></div>
+      <label>หมายเลขพร้อมเพย์ (เบอร์มือถือ / เลขบัตรประชาชน) — เว้นว่าง = รับเฉพาะจ่ายที่ร้าน
+        <input name="promptpay_id" inputmode="numeric" maxlength="20" placeholder="เช่น 0812345678" value="${esc(s.promptpay_id ?? '')}"></label>
       <label class="row" style="color:var(--ink)"><span class="switch"><input type="checkbox" name="is_open" ${s.is_open ? 'checked' : ''}><span></span></span>เปิดรับออเดอร์</label>
       <div><button class="btn primary">บันทึก</button></div>
       <p class="muted" style="margin:0;font-size:13px">ชื่อร้าน หมวดหมู่ และรหัสคิว แก้ไขได้โดยผู้ดูแลศูนย์อาหาร</p>
@@ -294,6 +361,7 @@ PAGES.shop = async () => {
     run(() => api('/vendor/shop', { method: 'PATCH', body: {
       description: f.description.value, open_time: f.open_time.value, close_time: f.close_time.value,
       prep_min: Number(f.prep_min.value), prep_max: Number(f.prep_max.value), is_open: f.is_open.checked,
+      promptpay_id: f.promptpay_id.value.trim(),
     } }), 'บันทึกข้อมูลร้านแล้ว');
   };
 };
@@ -471,9 +539,9 @@ PAGES['all-orders'] = async () => {
       <select id="f-status" style="width:auto"><option value="">ทุกสถานะ</option>${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === f.status ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <input type="date" id="f-date" value="${f.date}" style="width:auto">
     </div>
-    <div class="card table-wrap"><table><thead><tr><th>คิว</th><th>เวลาสั่ง</th><th>ร้าน</th><th>ลูกค้า</th><th>รายการ</th><th class="num">ยอด</th><th>สถานะ</th></tr></thead><tbody>
+    <div class="card table-wrap"><table><thead><tr><th>คิว</th><th>เวลาสั่ง</th><th>ร้าน</th><th>ลูกค้า</th><th>รายการ</th><th class="num">ยอด</th><th>ชำระเงิน</th><th>สถานะ</th></tr></thead><tbody>
     ${orders.map((o) => `<tr><td><b>${esc(o.queue_no)}</b></td><td>${fmtDateTime(o.created_at)}</td><td>${esc(o.shop.name)}</td><td>${esc(o.user.name)}</td>
-      <td>${o.items.map((i) => `${esc(i.name)} ×${i.qty}`).join(', ')}</td><td class="num">${baht(o.total)}</td><td>${pill(o.status)}</td></tr>`).join('')}
+      <td>${o.items.map((i) => `${esc(i.name)} ×${i.qty}`).join(', ')}</td><td class="num">${baht(o.total)}</td><td>${payPill(o)}</td><td>${pill(o.status)}</td></tr>`).join('')}
     </tbody></table>${orders.length ? '' : '<div class="empty">ไม่พบออเดอร์</div>'}</div>`;
   for (const [id, key] of [['f-shop', 'shop_id'], ['f-status', 'status'], ['f-date', 'date']]) {
     $('#' + id).onchange = (e) => { f[key] = e.target.value; PAGES['all-orders'](); };

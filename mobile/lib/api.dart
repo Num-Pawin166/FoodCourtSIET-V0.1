@@ -15,23 +15,37 @@ class Api {
   String? token;
   void Function()? onUnauthorized;
 
-  Future<dynamic> _send(String method, String path, [Object? body]) async {
+  /// ส่ง request: body เป็น JSON หรือ bytes (ไฟล์รูป) — คืน response ดิบเมื่อสำเร็จ
+  Future<http.Response> _request(String method, String path, {Object? json, List<int>? bytes}) async {
     final req = http.Request(method, Uri.parse('$apiBase$path'))
-      ..headers['Content-Type'] = 'application/json'
       ..headers.addAll({if (token != null) 'Authorization': 'Bearer $token'});
-    if (body != null) req.body = jsonEncode(body);
+    if (bytes != null) {
+      req.headers['Content-Type'] = 'application/octet-stream'; // server ตรวจชนิดรูปจากเนื้อไฟล์เอง
+      req.bodyBytes = bytes;
+    } else {
+      req.headers['Content-Type'] = 'application/json';
+      if (json != null) req.body = jsonEncode(json);
+    }
     http.Response res;
     try {
       res = await http.Response.fromStream(await req.send().timeout(const Duration(seconds: 70)));
     } catch (_) {
       throw ApiException(0, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง (เซิร์ฟเวอร์ฟรีอาจกำลังตื่น ~1 นาที)');
     }
-    final data = res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
     if (res.statusCode == 401 && token != null) onUnauthorized?.call();
     if (res.statusCode >= 400) {
+      dynamic data;
+      try {
+        data = jsonDecode(utf8.decode(res.bodyBytes));
+      } catch (_) {}
       throw ApiException(res.statusCode, (data is Map ? data['error'] : null) ?? 'เกิดข้อผิดพลาด (${res.statusCode})');
     }
-    return data;
+    return res;
+  }
+
+  Future<dynamic> _send(String method, String path, [Object? body, List<int>? bytes]) async {
+    final res = await _request(method, path, json: body, bytes: bytes);
+    return res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
   }
 
   // auth
@@ -68,15 +82,24 @@ class Api {
   Future<void> setFavorite(int menuItemId, bool fav) => _send(fav ? 'PUT' : 'DELETE', '/favorites/$menuItemId');
 
   // ออเดอร์
-  Future<Order> createOrder({required int shopId, required Map<int, int> items, required String pickupTime, String note = ''}) async {
+  Future<Order> createOrder({
+    required int shopId, required Map<int, int> items, required String pickupTime, String note = '', String paymentMethod = 'cash',
+  }) async {
     final d = await _send('POST', '/orders', {
       'shop_id': shopId,
       'items': [for (final e in items.entries) {'menu_item_id': e.key, 'qty': e.value}],
       'pickup_time': pickupTime,
       'note': note,
+      'payment_method': paymentMethod,
     });
     return Order.fromJson(d);
   }
+
+  // ชำระเงิน
+  Future<PaymentInfo> payment(int orderId) async => PaymentInfo.fromJson(await _send('GET', '/orders/$orderId/payment'));
+  Future<Order> uploadSlip(int orderId, List<int> imageBytes) async =>
+      Order.fromJson(await _send('POST', '/orders/$orderId/slip', null, imageBytes));
+  Future<List<int>> slipBytes(int orderId) async => (await _request('GET', '/orders/$orderId/slip')).bodyBytes;
 
   Future<List<Order>> orders({bool history = false}) async =>
       (await _send('GET', '/orders?scope=${history ? 'history' : 'active'}') as List).map((e) => Order.fromJson(e)).toList();

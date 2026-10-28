@@ -12,3 +12,6 @@ String get apiBase {
   }
   return 'http://localhost:3000/api';
 }
+
+/// แปลง path จาก API (เช่น /api/images/12) เป็น URL เต็มตามเซิร์ฟเวอร์ที่ใช้อยู่
+String? resolveUrl(String? path) => path == null || path.isEmpty ? null : Uri.parse(apiBase).resolve(path).toString();

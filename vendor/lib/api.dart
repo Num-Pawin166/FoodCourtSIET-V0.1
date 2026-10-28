@@ -16,23 +16,37 @@ class Api {
   String? token;
   void Function()? onUnauthorized;
 
-  Future<dynamic> _send(String method, String path, [Object? body]) async {
+  /// ส่ง request: body เป็น JSON หรือ bytes (ไฟล์รูป) — คืน response ดิบเมื่อสำเร็จ
+  Future<http.Response> _request(String method, String path, {Object? json, List<int>? bytes}) async {
     final req = http.Request(method, Uri.parse('$apiBase$path'))
-      ..headers['Content-Type'] = 'application/json'
       ..headers.addAll({if (token != null) 'Authorization': 'Bearer $token'});
-    if (body != null) req.body = jsonEncode(body);
+    if (bytes != null) {
+      req.headers['Content-Type'] = 'application/octet-stream'; // server ตรวจชนิดรูปจากเนื้อไฟล์เอง
+      req.bodyBytes = bytes;
+    } else {
+      req.headers['Content-Type'] = 'application/json';
+      if (json != null) req.body = jsonEncode(json);
+    }
     http.Response res;
     try {
       res = await http.Response.fromStream(await req.send().timeout(const Duration(seconds: 70)));
     } catch (_) {
       throw ApiException(0, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง (เซิร์ฟเวอร์ฟรีอาจกำลังตื่น ~1 นาที)');
     }
-    final data = res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
     if (res.statusCode == 401 && token != null) onUnauthorized?.call();
     if (res.statusCode >= 400) {
+      dynamic data;
+      try {
+        data = jsonDecode(utf8.decode(res.bodyBytes));
+      } catch (_) {}
       throw ApiException(res.statusCode, (data is Map ? data['error'] : null) ?? 'เกิดข้อผิดพลาด (${res.statusCode})');
     }
-    return data;
+    return res;
+  }
+
+  Future<dynamic> _send(String method, String path, [Object? body, List<int>? bytes]) async {
+    final res = await _request(method, path, json: body, bytes: bytes);
+    return res.body.isEmpty ? null : jsonDecode(utf8.decode(res.bodyBytes));
   }
 
   Future<(String, Vendor)> login(String username, String password) async {
@@ -59,4 +73,14 @@ class Api {
   Future<void> createMenu(Map<String, dynamic> body) => _send('POST', '/vendor/menu', body);
   Future<void> updateMenu(int id, Map<String, dynamic> body) => _send('PATCH', '/vendor/menu/$id', body);
   Future<void> deleteMenu(int id) => _send('DELETE', '/vendor/menu/$id');
+
+  /// คืนเมนูที่สร้าง (ต้องใช้ id ต่อเพื่ออัปโหลดรูป)
+  Future<MenuItem> createMenuItem(Map<String, dynamic> body) async => MenuItem.fromJson(await _send('POST', '/vendor/menu', body));
+  Future<void> uploadMenuImage(int id, List<int> bytes) => _send('POST', '/vendor/menu/$id/image', null, bytes);
+  Future<void> deleteMenuImage(int id) => _send('DELETE', '/vendor/menu/$id/image');
+
+  // การชำระเงิน
+  Future<Order> setPayment(int orderId, String action, {String? reason}) async =>
+      Order.fromJson(await _send('PATCH', '/vendor/orders/$orderId/payment', {'action': action, 'reason': ?reason}));
+  Future<List<int>> slipBytes(int orderId) async => (await _request('GET', '/vendor/orders/$orderId/slip')).bodyBytes;
 }
