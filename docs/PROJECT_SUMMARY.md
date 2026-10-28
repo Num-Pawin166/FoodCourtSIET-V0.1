@@ -25,7 +25,7 @@
 |---|---|---|---|
 | แอปนักศึกษา (Android + เว็บ) | นักศึกษา / บุคลากร | Flutter | `mobile/` |
 | แอปร้านค้า "FoodCourt ร้านค้า" (Android) | เจ้าของร้าน | Flutter | `vendor/` |
-| เว็บหลังบ้าน | ร้านค้า + ผู้ดูแล | HTML / CSS / JavaScript | `backend/public/` |
+| เว็บหลังบ้าน | ผู้ดูแล | HTML / CSS / JavaScript | `backend/public/` |
 | REST API | ทุกแอป | Node.js 22 + Express 5 + JWT | `backend/src/` |
 | ฐานข้อมูล | — | Turso (libSQL / SQLite บน cloud) | — |
 | AI แนะนำเมนู | นักศึกษา | Google Gemini | `backend/src/routes/ai.js` |
