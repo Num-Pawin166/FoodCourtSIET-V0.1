@@ -1,11 +1,11 @@
 {
-    "name": "foodcourt_vendor",
-    "short_name": "foodcourt_vendor",
+    "name": "FoodCourt ร้านค้า",
+    "short_name": "ร้านค้า",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#2B2B2B",
+    "theme_color": "#E5437F",
+    "description": "จัดการออเดอร์ร้านค้า FoodCourt SIET",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

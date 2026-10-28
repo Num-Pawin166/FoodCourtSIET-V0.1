@@ -1,11 +1,11 @@
 {
-    "name": "foodcourt_siet",
-    "short_name": "foodcourt_siet",
+    "name": "FoodCourt SIET",
+    "short_name": "FoodCourt",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FDF7EC",
+    "theme_color": "#E5437F",
+    "description": "สั่งอาหารล่วงหน้า ศูนย์อาหาร SIET KMITL",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
