@@ -127,5 +127,16 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.windows;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     expect(await ReviewService.init(), isNull);
+    expect(ReviewService.initError, isNull);
+  });
+
+  test('init บน Android แต่เปิด Firebase ไม่ได้ → คืน null และเก็บสาเหตุไว้แสดง', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android; // ในเทสต์ไม่มี Firebase native → ล้มเหลวแน่นอน
+    addTearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      ReviewService.initError = null;
+    });
+    expect(await ReviewService.init(), isNull);
+    expect(ReviewService.initError, isNotNull);
   });
 }

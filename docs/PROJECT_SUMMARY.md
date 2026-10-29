@@ -365,7 +365,7 @@ FoodCourt SIET/
 │   │   ├── widgets.dart        # วิดเจ็ตที่ใช้ซ้ำ
 │   │   └── screens/            # login, home, shop_menu, cart, payment,
 │   │                           # orders, ai_chat, profile, review_widgets, main_shell
-│   ├── test/                   # unit / widget / integration / security (117 เทสต์)
+│   ├── test/                   # unit / widget / integration / security (119 เทสต์)
 │   └── android/app/google-services.json
 ├── vendor/                     # แอปร้านค้า (Flutter)
 │   ├── lib/
@@ -394,7 +394,7 @@ FoodCourt SIET/
 
 > ⚠️ รหัสผ่านเหล่านี้เปิดเผยใน repository ก่อนใช้งานจริงต้องเปลี่ยนทั้งหมด
 
-**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 274 เทสต์ coverage ทุกส่วนเกิน 90% และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
+**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 276 เทสต์ coverage ทุกส่วนเกิน 90% และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
 
 ## 10. ข้อจำกัดและแนวทางพัฒนาต่อ
 

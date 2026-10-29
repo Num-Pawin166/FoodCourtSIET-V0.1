@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
 import '../models.dart';
+import '../reviews.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'cart_screen.dart';
@@ -76,7 +77,15 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
         onRefresh: _load,
         child: CustomScrollView(slivers: [
           SliverToBoxAdapter(child: _Header(shop: shop)),
-          if (state.reviews != null) SliverToBoxAdapter(child: ShopReviews(shopId: shop.id)),
+          if (state.reviews != null)
+            SliverToBoxAdapter(child: ShopReviews(shopId: shop.id))
+          else if (ReviewService.initError != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+                child: Text('ระบบรีวิวใช้งานไม่ได้: ${ReviewService.initError}', style: const TextStyle(fontSize: 12, color: AppColors.red)),
+              ),
+            ),
           const SliverToBoxAdapter(
             child: Padding(padding: EdgeInsets.fromLTRB(20, 20, 20, 8), child: Text('เมนูและราคา', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600))),
           ),

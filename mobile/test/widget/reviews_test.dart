@@ -85,6 +85,17 @@ void main() {
       await tester.pumpWidget(wrap(state, const ShopMenuScreen(shopId: 1)));
       await tester.pumpAndSettle();
       expect(find.text('รีวิวจากลูกค้า'), findsNothing);
+      expect(find.textContaining('ระบบรีวิวใช้งานไม่ได้'), findsNothing);
+    });
+
+    testWidgets('Android แต่เปิด Firebase ไม่ได้ → แสดงสาเหตุ (ไม่ซ่อนเงียบ)', (tester) async {
+      usePhoneScreen(tester);
+      ReviewService.initError = Exception('no network');
+      addTearDown(() => ReviewService.initError = null);
+      final state = await signedInState(backend);
+      await tester.pumpWidget(wrap(state, const ShopMenuScreen(shopId: 1)));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ระบบรีวิวใช้งานไม่ได้: Exception: no network'), findsOneWidget);
     });
   });
 

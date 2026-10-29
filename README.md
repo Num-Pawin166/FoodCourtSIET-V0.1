@@ -208,7 +208,7 @@ flutter build web --release --base-href /app/ --dart-define=API_URL=https://<URL
 - รีเซ็ตข้อมูลบน Turso: ใส่ `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` ใน `backend/.env` แล้ว `npm run seed`
 
 ## การทดสอบ + CI
-- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 117 · แอปร้านค้า 45 · Firestore rules 15 เทสต์ coverage ทุกส่วน > 90%
+- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 119 · แอปร้านค้า 45 · Firestore rules 15 เทสต์ coverage ทุกส่วน > 90%
 - GitHub Actions รันเทสต์ + build APK ทุกครั้งที่ push / เปิด PR — รายละเอียดและวิธีรันเอง: [docs/TESTING.md](docs/TESTING.md)
 - แบบฟอร์มรายงาน Usability Testing: [docs/USABILITY_TEST.md](docs/USABILITY_TEST.md)
 

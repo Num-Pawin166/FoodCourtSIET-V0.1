@@ -36,8 +36,12 @@ class ReviewService {
 
   ReviewService(this.db, {required this.signIn});
 
+  /// สาเหตุที่เปิด Firebase ไม่ได้ (บน Android) — หน้าร้านแสดงให้เห็นแทนการซ่อนเงียบๆ
+  static Object? initError;
+
   /// เปิดใช้บน Android เท่านั้น (เว็บ/แพลตฟอร์มอื่นไม่มีค่าเชื่อมต่อ → ซ่อนส่วนรีวิว)
   static Future<ReviewService?> init() async {
+    initError = null;
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
     try {
       await Firebase.initializeApp(options: DefaultFirebaseOptions.android);
@@ -46,6 +50,7 @@ class ReviewService {
           signIn: () async => (auth.currentUser ?? (await auth.signInAnonymously()).user!).uid);
     } catch (e) {
       debugPrint('firebase init failed: $e');
+      initError = e;
       return null;
     }
   }
