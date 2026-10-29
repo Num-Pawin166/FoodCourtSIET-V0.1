@@ -11,7 +11,6 @@
 | แอปนักศึกษาแบบเว็บ (iPhone / Android) | https://foodcourt-siet.onrender.com/app/ |
 | ไฟล์ติดตั้ง Android (APK) | GitHub → **Actions** → รอบล่าสุดที่เขียว → **Artifacts** (`mobile-apk`, `vendor-apk`) |
 
-![สถาปัตยกรรมระบบ](docs/flowcharts/01-architecture.png)
 
 ## ส่วนประกอบ
 
@@ -137,10 +136,6 @@ subst X: "D:\Year 3, Term 1 work\mobile app\FoodCourt SIET"
 - จัดการร้านค้า: รหัสคิว, หมวด, เวลาทำการ
 - จัดการผู้ใช้: เพิ่มบัญชี, ผูกบัญชีร้านค้ากับร้าน, รีเซ็ตรหัสผ่าน, ระงับบัญชี
 - ดูออเดอร์ทั้งหมด กรองตามร้าน สถานะ หรือวันที่
-
-## ขั้นตอนการทำงาน
-
-![ภาพรวมการสั่งอาหาร](docs/flowcharts/02-order-overall.png)
 
 **สถานะออเดอร์**
 ```
