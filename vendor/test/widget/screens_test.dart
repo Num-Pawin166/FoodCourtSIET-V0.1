@@ -437,9 +437,12 @@ void main() {
       await tester.tap(find.text('ดูออเดอร์ ›'));
       await tester.pumpAndSettle();
       expect(state.tab, 0);
-      await tester.tap(find.text('ร้านของฉัน'));
+      await tester.tap(find.text('รีวิว'));
       await tester.pumpAndSettle();
       expect(state.tab, 2);
+      await tester.tap(find.text('ร้านของฉัน'));
+      await tester.pumpAndSettle();
+      expect(state.tab, 3);
     });
   });
 }

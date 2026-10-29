@@ -1,0 +1,27 @@
+flowchart TB
+    subgraph Client["ฝั่งผู้ใช้"]
+        direction LR
+        L[("SQLite<br/>ในมือถือนักศึกษา")]
+        S["📱 แอปนักศึกษา<br/>Flutter"]
+        V["📱 แอปร้านค้า<br/>Flutter"]
+        W["💻 เว็บหลังบ้าน<br/>HTML/JS"]
+        L <--> S
+    end
+
+    subgraph Cloud["บริการบน cloud"]
+        direction LR
+        GS["Google Sign-In<br/>@kmitl.ac.th"]
+        API["REST API บน Render<br/>Node.js + Express"]
+        F[("Firebase<br/>Firestore + Auth<br/>รีวิวร้าน")]
+    end
+
+    T[("Turso<br/>ฐานข้อมูลหลัก")]
+    G["Google Gemini<br/>AI แนะนำเมนู"]
+
+    S -- "ล็อกอิน" --> GS
+    S & V & W -- "HTTPS + JWT" --> API
+    S -- "เขียน/อ่านรีวิว" --> F
+    V -- "อ่านรีวิวร้านตัวเอง" --> F
+    API -- "ตรวจ token" --> GS
+    API <--> T
+    API --> G

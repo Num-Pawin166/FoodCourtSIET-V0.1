@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
+import 'reviews.dart';
 import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/vendor_shell.dart';
 
-void main() {
-  runApp(ChangeNotifierProvider(create: (_) => AppState()..restore(), child: const VendorApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final reviews = await ReviewFeed.init();
+  runApp(ChangeNotifierProvider(create: (_) => AppState(reviews: reviews)..restore(), child: const VendorApp()));
 }
 
 class VendorApp extends StatelessWidget {

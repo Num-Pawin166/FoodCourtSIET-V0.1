@@ -1,0 +1,18 @@
+sequenceDiagram
+    actor A as นักศึกษา A
+    participant App as แอปนักศึกษา A
+    participant FA as Firebase Auth
+    participant FS as Cloud Firestore
+    participant B as แอปนักศึกษา B
+    participant V as แอปร้านค้า
+
+    B->>FS: เปิดหน้าร้าน → ฟังรีวิวของร้านนี้
+    V->>FS: เปิดแท็บ รีวิว → ฟังรีวิวร้านตัวเอง
+    A->>App: แท็บประวัติ → ให้คะแนนร้าน → 4 ดาว + ความคิดเห็น
+    App->>FA: ล็อกอิน anonymous (ครั้งแรกครั้งเดียว)
+    FA-->>App: uid
+    App->>FS: บันทึก reviews/order_101 { rating, comment, authorUid = uid }
+    FS->>FS: Security rules ตรวจ: เจ้าของจริง, คะแนน 1–5, ความยาว, ฟิลด์ครบ
+    FS-->>App: บันทึกแล้ว → การ์ดขึ้น รีวิวแล้ว
+    FS-->>B: รีวิวใหม่ขึ้นทันที → คะแนนเฉลี่ยอัปเดต
+    FS-->>V: รีวิวใหม่ขึ้นทันที → คะแนนเฉลี่ย + สัดส่วนดาวอัปเดต

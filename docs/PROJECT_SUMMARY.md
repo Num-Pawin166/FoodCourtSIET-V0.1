@@ -10,8 +10,7 @@
 | แอปนักศึกษาแบบเว็บ | https://foodcourt-siet.onrender.com/app/ |
 | Source code | https://github.com/Num-Pawin166/FoodCourtSIET-V0.1 |
 
-> แผนภาพในไฟล์นี้เขียนด้วย Mermaid ซึ่ง GitHub แสดงเป็นรูปให้อัตโนมัติ
-> ถ้าดูใน VS Code ต้องติดตั้งส่วนขยาย "Markdown Preview Mermaid Support" ก่อน
+> รูป Flowchart ทั้งหมด (PNG สำหรับใส่สไลด์) อยู่ในโฟลเดอร์ [flowcharts/](flowcharts/)
 
 ---
 
@@ -29,7 +28,7 @@
 | ส่วน | ผู้ใช้ | เทคโนโลยีหลัก | ไลบรารีสำคัญ และใช้ทำอะไร | โฟลเดอร์ |
 |---|---|---|---|---|
 | **แอปนักศึกษา** (Android + เว็บ) | นักศึกษา / บุคลากร | Flutter 3.44 (Dart) · Material 3 | `http` เรียก API · `provider` เก็บสถานะแอป · `google_sign_in` ล็อกอิน Google · `sqflite` ฐานข้อมูลในเครื่อง · `cloud_firestore` + `firebase_auth` รีวิวร้าน · `qr_flutter` QR พร้อมเพย์ · `image_picker` แนบสลิป · `google_fonts` ฟอนต์ Prompt | `mobile/` |
-| **แอปร้านค้า** "FoodCourt ร้านค้า" (Android) | เจ้าของร้าน | Flutter 3.44 (Dart) · Material 3 | `http` · `provider` · `audioplayers` เสียงเตือนออเดอร์ใหม่ · `image_picker` ถ่ายรูปเมนู/รูปร้าน | `vendor/` |
+| **แอปร้านค้า** "FoodCourt ร้านค้า" (Android) | เจ้าของร้าน | Flutter 3.44 (Dart) · Material 3 | `http` · `provider` · `audioplayers` เสียงเตือนออเดอร์ใหม่ · `image_picker` ถ่ายรูปเมนู/รูปร้าน · `cloud_firestore` + `firebase_auth` ดูรีวิวร้านตัวเอง | `vendor/` |
 | **เว็บหลังบ้าน** | ผู้ดูแล (และร้านค้า) | HTML / CSS / JavaScript ล้วน ไม่ต้อง build | — | `backend/public/` |
 | **REST API** | ทุกแอป | Node.js 22+ · Express 5 | `@libsql/client` ต่อฐานข้อมูล · `jsonwebtoken` ออก/ตรวจ token · `bcryptjs` เข้ารหัสรหัสผ่าน · `google-auth-library` ตรวจ token ของ Google · `cors` | `backend/src/` |
 | **Security rules ของ Firestore** | — | Firestore Rules v2 | `firebase-tools` (Emulator) · `@firebase/rules-unit-testing` สำหรับเทสต์ | `firestore/` |
@@ -42,7 +41,7 @@
 | **Turso** (libSQL, free, Singapore) | **ฐานข้อมูลหลัก**: ผู้ใช้ ร้าน เมนู ออเดอร์ การชำระเงิน รูปภาพ | REST API | `backend/src/db.js` |
 | **Google Gemini** (3.5 Flash → Flash-Lite) | AI แนะนำเมนู | REST API | `backend/src/routes/ai.js` |
 | **Google Sign-In** | ล็อกอินด้วยบัญชี @kmitl.ac.th | แอปนักศึกษา → REST API ตรวจซ้ำ | `mobile/lib/google_auth.dart`, `backend/src/routes/auth.js` |
-| **Firebase: Cloud Firestore + Authentication** | รีวิวร้านแบบ real-time (ล็อกอิน anonymous ให้อัตโนมัติ) | แอปนักศึกษาเรียกตรง | `mobile/lib/reviews.dart`, `firestore/firestore.rules` |
+| **Firebase: Cloud Firestore + Authentication** | รีวิวร้านแบบ real-time (ล็อกอิน anonymous ให้อัตโนมัติ) | แอปนักศึกษาเขียน/อ่าน · แอปร้านค้าอ่านรีวิวร้านตัวเอง | `mobile/lib/reviews.dart`, `vendor/lib/reviews.dart`, `firestore/firestore.rules` |
 | **GitHub Actions** | CI: เทสต์ + วัด coverage + build APK ทุกครั้งที่ push | — | `.github/workflows/ci.yml` |
 
 ### 2.3 ฐานข้อมูล 3 แบบ ใช้ต่างกันอย่างไร
@@ -65,36 +64,7 @@
 
 ## 3. สถาปัตยกรรมระบบ
 
-```mermaid
-flowchart LR
-    subgraph Client["ฝั่งผู้ใช้"]
-        S["📱 แอปนักศึกษา<br/>Flutter"]
-        V["📱 แอปร้านค้า<br/>Flutter"]
-        W["💻 เว็บหลังบ้าน<br/>HTML/JS"]
-        L[("SQLite<br/>ในมือถือ")]
-    end
-
-    subgraph Render["Render (Singapore)"]
-        API["REST API<br/>Node.js + Express"]
-    end
-
-    T[("Turso<br/>ฐานข้อมูลหลัก")]
-    G["Google Gemini<br/>AI แนะนำเมนู"]
-    GS["Google Sign-In"]
-    F[("Cloud Firestore<br/>รีวิวร้าน")]
-    FA["Firebase Auth<br/>anonymous"]
-
-    S <--> L
-    S -- "HTTPS + JWT" --> API
-    V -- "HTTPS + JWT" --> API
-    W -- "HTTPS + JWT" --> API
-    S -- "ขอ ID token" --> GS
-    API -- "ตรวจ token / โดเมน" --> GS
-    API <--> T
-    API --> G
-    S <-- "real-time" --> F
-    S --> FA
-```
+![สถาปัตยกรรมระบบ](flowcharts/01-architecture.png)
 
 **หลักการ:** แอปไม่เคยต่อ Turso หรือ Gemini ตรงๆ ทุกอย่างผ่าน REST API ซึ่งตรวจสิทธิ์และคำนวณราคาเอง
 ยกเว้นรีวิวที่แอปต่อ Firestore ตรง โดยมี security rules คุมสิทธิ์แทน
@@ -124,6 +94,7 @@ flowchart LR
 | จัดการเมนู | เพิ่ม แก้ไข ลบ ใส่รูป (ถ่ายหรือเลือกจากคลังภาพ) และสวิตช์ "หมด" |
 | ข้อมูลร้าน | รูปร้าน เวลาเปิด-ปิด เวลารอ คำอธิบาย และหมายเลขพร้อมเพย์ |
 | โปรไฟล์ | แก้ชื่อเจ้าของร้าน และเปลี่ยนรหัสผ่าน |
+| **รีวิวร้าน** (แท็บ "รีวิว") | คะแนนเฉลี่ย, จำนวนรีวิวแยกตาม 1–5 ดาว และรีวิวทุกอันพร้อมความคิดเห็นและเลขออเดอร์ อัปเดตทันทีเมื่อลูกค้ารีวิวใหม่ (อ่านอย่างเดียว แก้/ลบไม่ได้) |
 | สรุปยอด | จำนวนออเดอร์ ยอดขาย และจำนวนออเดอร์ที่รอทำวันนี้ |
 
 ### เว็บผู้ดูแล (แอดมิน)
@@ -134,149 +105,40 @@ flowchart LR
 
 ## 5. Flowchart การทำงาน
 
-### 5.1 ภาพรวม: ตั้งแต่สั่งจนรับอาหาร
+รูปทุกภาพเป็นไฟล์ PNG อยู่ใน [flowcharts/](flowcharts/) ลากใส่สไลด์ได้เลย · แก้แผนภาพได้ที่ `scripts/flowcharts/*.mmd` แล้วรัน `node scripts/render_flowcharts.mjs`
 
-```mermaid
-flowchart TD
-    A([นักศึกษาเปิดแอป]) --> B{ล็อกอินอยู่แล้ว?}
-    B -- ไม่ --> C[ล็อกอิน Google @kmitl.ac.th<br/>หรือรหัสผ่าน] --> D
-    B -- ใช่ --> D[หน้าแรก: รายชื่อร้าน คิว เวลารอ]
-    D --> E{เลือกเองหรือให้ AI ช่วย?}
-    E -- เลือกเอง --> F[เปิดหน้าร้าน]
-    E -- AI --> AI[พิมพ์ความต้องการ<br/>เช่น งบ 50 ไม่เผ็ด] --> AI2[AI แนะนำเมนูจริง] --> F
-    F --> G[ใส่ตะกร้า<br/>บันทึกลง SQLite ในเครื่อง]
-    G --> H[เลือกเวลารับ + หมายเหตุ + วิธีจ่าย]
-    H --> I[ยืนยัน → POST /orders]
-    I --> J[เซิร์ฟเวอร์คิดราคาเอง ออกเลขคิว A-001<br/>บันทึกลง Turso]
-    J --> K{จ่ายแบบไหน?}
-    K -- พร้อมเพย์ --> P[แสดง QR → โอน → แนบสลิป]
-    K -- จ่ายที่ร้าน --> Q
-    P --> Q[แอปร้านค้าเช็กทุก 5 วินาที<br/>เจอออเดอร์ใหม่ → เสียงเตือนดังซ้ำ]
-    Q --> R{ร้านรับออเดอร์?}
-    R -- ปฏิเสธ --> X([ยกเลิก แจ้งเหตุผลลูกค้า])
-    R -- รับ --> S[กำลังทำ → พร้อมรับ]
-    S --> T[นักศึกษาเห็นสถานะ "พร้อมรับ"<br/>แอปเช็กทุก 5 วินาที]
-    T --> U[แสดงเลขคิวที่ร้าน → ร้านกด "ลูกค้ารับแล้ว"]
-    U --> V[ออเดอร์ย้ายไปแท็บประวัติ]
-    V --> W[ให้คะแนนร้าน → บันทึกลง Firestore<br/>ทุกคนเห็นในหน้าร้านทันที]
-    W --> Z([จบ])
-```
+### 5.1 ภาพรวม: ตั้งแต่สั่งจนรับอาหาร
+![ภาพรวมการสั่งอาหาร](flowcharts/02-order-overall.png)
 
 ### 5.2 การเข้าสู่ระบบด้วย Google
-
-```mermaid
-sequenceDiagram
-    actor U as นักศึกษา
-    participant App as แอปนักศึกษา
-    participant G as Google
-    participant API as REST API
-    participant DB as Turso
-
-    U->>App: กด "เข้าสู่ระบบด้วย Google"
-    App->>G: ขอเลือกบัญชี (จำกัดโดเมน hd=kmitl.ac.th)
-    G-->>App: ID token
-    App->>API: POST /auth/google { idToken }
-    API->>G: ตรวจลายเซ็น token
-    API->>API: ตรวจซ้ำ: hd = kmitl.ac.th, อีเมลยืนยันแล้ว
-    alt ไม่ใช่ @kmitl.ac.th
-        API-->>App: 403 ปฏิเสธ
-    else ถูกต้อง
-        API->>DB: หา/สร้างบัญชี (ผูกกับรหัสนักศึกษาเดิมถ้ามี)
-        API-->>App: JWT + ข้อมูลผู้ใช้
-        App->>App: เก็บ token แล้วไปหน้าแรก
-    end
-```
+![ล็อกอินด้วย Google](flowcharts/03-login-google.png)
 
 ### 5.3 การชำระเงินด้วยพร้อมเพย์
-
-```mermaid
-flowchart TD
-    A[สั่งอาหารแบบโอนพร้อมเพย์] --> B[เซิร์ฟเวอร์สร้าง QR<br/>มาตรฐาน EMVCo ใส่ยอดเงินให้]
-    B --> C[นักศึกษาสแกนจ่ายในแอปธนาคาร]
-    C --> D[แนบสลิป<br/>เซิร์ฟเวอร์ตรวจว่าเป็นรูปจริง ≤ 2 MB]
-    D --> E[สถานะ: รอร้านตรวจสลิป]
-    E --> F{ร้านดูสลิป}
-    F -- ถูกต้อง --> G([ชำระเงินแล้ว ✅])
-    F -- ไม่ถูกต้อง --> H[ปฏิเสธพร้อมเหตุผล<br/>เช่น ยอดไม่ตรง]
-    H --> D
-```
+![ชำระเงินพร้อมเพย์](flowcharts/04-promptpay.png)
 
 - เงินเข้าบัญชีร้านโดยตรง ไม่ผ่านระบบ และไม่ต้องสมัครบริการไหน
 - สลิปเปิดดูได้แค่เจ้าของออเดอร์และร้านของออเดอร์นั้น
 
 ### 5.4 AI แนะนำเมนู
-
-```mermaid
-flowchart TD
-    A[นักศึกษาพิมพ์: งบ 50 ไม่เผ็ด] --> B[POST /ai/chat]
-    B --> C{เกิน 10 ครั้ง/นาที?}
-    C -- ใช่ --> C1([429 รอสักครู่])
-    C -- ไม่ --> D[ดึงจาก Turso: ร้านที่เปิดอยู่<br/>เมนูที่ยังมีขาย ราคา คิวตอนนี้]
-    D --> E[ส่งให้ Gemini 3.5 Flash<br/>พร้อมคำสั่งให้เลือกจากเมนูนี้เท่านั้น]
-    E --> F{สำเร็จ?}
-    F -- ไม่ --> G[ลอง Gemini Flash-Lite]
-    G --> H{สำเร็จ?}
-    H -- ไม่ --> I[ตัวแนะนำแบบกฎ<br/>กรองงบ ความเผ็ด หมู หมวด]
-    F -- ใช่ --> J
-    H -- ใช่ --> J
-    I --> J[ตรวจว่าเมนูที่ได้มีอยู่จริงและยังขาย]
-    J --> K[แอปแสดงการ์ดเมนูพร้อมเหตุผล]
-    K --> L[กดการ์ด → ไปหน้าร้าน → สั่งต่อได้ทันที]
-```
+![AI แนะนำเมนู](flowcharts/05-ai.png)
 
 ### 5.5 รีวิวร้าน (Firestore)
+นักศึกษาเขียนรีวิว → นักศึกษาคนอื่นเห็นในหน้าร้าน และ**ร้านค้าเห็นในแท็บ "รีวิว"** ทันที
 
-```mermaid
-sequenceDiagram
-    actor A as นักศึกษา A
-    participant App as แอป A
-    participant FA as Firebase Auth
-    participant FS as Cloud Firestore
-    participant B as แอปของนักศึกษา B
+![รีวิวร้าน](flowcharts/06-reviews.png)
 
-    B->>FS: เปิดหน้าร้าน → ฟังรีวิวของร้านนี้ (snapshots)
-    A->>App: แท็บประวัติ → "ให้คะแนนร้าน" → 4 ดาว + ความคิดเห็น
-    App->>FA: ล็อกอิน anonymous (ครั้งแรกครั้งเดียว)
-    FA-->>App: uid
-    App->>FS: set reviews/order_101 { rating, comment, authorUid = uid, ... }
-    FS->>FS: Security rules ตรวจ: เจ้าของจริง, คะแนน 1–5, ความยาว, ฟิลด์ครบ
-    FS-->>App: บันทึกแล้ว → การ์ดขึ้น "รีวิวแล้ว"
-    FS-->>B: ส่งรีวิวใหม่ให้ทันที → คะแนนเฉลี่ยอัปเดต
-```
+### 5.6 แอปร้านค้ารับออเดอร์
+![แอปร้านค้ารับออเดอร์](flowcharts/07-vendor-orders.png)
 
-### 5.6 สถานะออเดอร์
-
-```mermaid
-stateDiagram-v2
-    [*] --> pending: นักศึกษาสั่ง
-    pending --> accepted: ร้านรับ
-    accepted --> cooking: เริ่มทำ
-    cooking --> ready: ทำเสร็จ
-    ready --> completed: ลูกค้ารับแล้ว
-    pending --> cancelled: ลูกค้ายกเลิก / ร้านปฏิเสธ
-    accepted --> cancelled: ร้านยกเลิก
-    completed --> [*]
-    cancelled --> [*]
-```
+### 5.7 สถานะออเดอร์
+![สถานะออเดอร์](flowcharts/08-order-status.png)
 
 - ลูกค้ายกเลิกได้เฉพาะตอน `pending` / ร้านยกเลิกได้ถึง `accepted`
 - เลขคิวรีเซ็ตทุกวันแยกตามร้าน: `{รหัสร้าน}-{ลำดับ}` เช่น A-001
 - เวลาทั้งหมดคำนวณตามเวลาไทย (Asia/Bangkok)
 
-### 5.7 การทำงานของ CI (ทุกครั้งที่ push)
-
-```mermaid
-flowchart LR
-    P([git push]) --> GA[GitHub Actions]
-    GA --> J1[Backend<br/>เทสต์ + coverage ≥ 70%<br/>+ เช็กเซิร์ฟเวอร์เปิดได้]
-    GA --> J2[Firestore rules<br/>เทสต์บน Emulator]
-    GA --> J3[Student app<br/>analyze → test → coverage → build APK]
-    GA --> J4[Vendor app<br/>analyze → test → coverage → build APK]
-    J1 & J2 & J3 & J4 --> R{ผ่านทั้งหมด?}
-    R -- ใช่ --> OK([✅ เขียว + ไฟล์ APK ให้ดาวน์โหลด])
-    R -- ไม่ --> NG([❌ แดง])
-    P --> RD[Render deploy API ใหม่อัตโนมัติ]
-```
+### 5.8 การทำงานของ CI (ทุกครั้งที่ push)
+![CI](flowcharts/09-ci.png)
 
 ## 6. ความปลอดภัย
 - รหัสผ่านเก็บแบบเข้ารหัส (bcrypt) และยืนยันตัวตนด้วย JWT
@@ -317,7 +179,7 @@ flowchart LR
 
 ข้อมูลในเครื่องทั้งหมดถูกล้างเมื่อออกจากระบบ
 
-**Cloud Firestore (Firebase project `foodcourt-siet`)** — `mobile/lib/reviews.dart`
+**Cloud Firestore (Firebase project `foodcourt-siet`)** — เขียนจาก `mobile/lib/reviews.dart` · ร้านค้าอ่านผ่าน `vendor/lib/reviews.dart`
 
 | Collection | เก็บอะไร |
 |---|---|
@@ -371,15 +233,26 @@ FoodCourt SIET/
 │   ├── lib/
 │   │   ├── main.dart · app_state.dart · api.dart · models.dart · theme.dart
 │   │   ├── order_alarm.dart    # เสียงเตือนดังซ้ำทุก 3 วินาที
-│   │   └── screens/            # login, orders, menu, shop, vendor_shell
+│   │   ├── reviews.dart        # อ่านรีวิวร้านตัวเองจาก Firestore
+│   │   ├── firebase_options.dart
+│   │   └── screens/            # login, orders, menu, reviews, shop, vendor_shell
 │   ├── assets/sounds/new_order.wav
-│   └── test/                   # unit / widget / integration / security (45 เทสต์)
+│   └── test/                   # unit / widget / integration / security (57 เทสต์)
 ├── firestore/                  # Security rules ของ Firestore
 │   ├── firestore.rules
 │   ├── firebase.json           # ตั้งค่า Emulator
 │   └── test/rules.test.js      # เทสต์ rules บน Emulator (15 เทสต์)
-├── scripts/check_coverage.py   # ตรวจว่า coverage ≥ 70%
-├── docs/                       # เอกสารทั้งหมด (ไฟล์นี้, คู่มือ, การทดสอบ, เกณฑ์)
+├── scripts/
+│   ├── check_coverage.py       # ตรวจว่า coverage ≥ 70%
+│   ├── render_flowcharts.mjs   # สร้างรูป Flowchart (PNG) จากต้นฉบับ
+│   └── flowcharts/             # ต้นฉบับ Flowchart (.mmd)
+├── docs/                       # เอกสารทั้งหมด
+│   ├── PROJECT_SUMMARY.md      # ไฟล์นี้
+│   ├── USER_GUIDE.md           # คู่มือการใช้งาน
+│   ├── TESTING.md              # การทดสอบ + CI
+│   ├── RUBRIC_CHECKLIST.md     # เทียบงานกับเกณฑ์การประเมิน
+│   ├── USABILITY_TEST.md       # แบบฟอร์มรายงาน Usability Testing
+│   └── flowcharts/             # รูป Flowchart 9 ภาพ (.png)
 ├── render.yaml                 # ตั้งค่า deploy บน Render
 └── README.md
 ```
@@ -394,7 +267,7 @@ FoodCourt SIET/
 
 > ⚠️ รหัสผ่านเหล่านี้เปิดเผยใน repository ก่อนใช้งานจริงต้องเปลี่ยนทั้งหมด
 
-**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 276 เทสต์ coverage ทุกส่วนเกิน 90% และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
+**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 288 เทสต์ coverage ทุกส่วนเกิน 90% และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
 
 ## 10. ข้อจำกัดและแนวทางพัฒนาต่อ
 

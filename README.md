@@ -10,7 +10,7 @@
 | แอปร้านค้า "FoodCourt ร้านค้า" | ร้านค้า | Flutter | [vendor/](vendor/) |
 | เว็บหลังบ้าน | ร้านค้า, ผู้ดูแล | HTML/JS (ไม่ต้อง build) | [backend/public/](backend/public/) |
 | REST API + ฐานข้อมูล | — | Node.js 22.12+ · Express 5 · libSQL (Turso บน cloud / ไฟล์ SQLite ในเครื่อง) · JWT | [backend/src/](backend/src/) |
-| รีวิวร้าน | นักศึกษา | Cloud Firestore + Firebase Auth (anonymous) · security rules | [mobile/lib/reviews.dart](mobile/lib/reviews.dart), [firestore/](firestore/) |
+| รีวิวร้าน | นักศึกษา (เขียน) · ร้านค้า (อ่าน) | Cloud Firestore + Firebase Auth (anonymous) · security rules | [mobile/lib/reviews.dart](mobile/lib/reviews.dart), [vendor/lib/reviews.dart](vendor/lib/reviews.dart), [firestore/](firestore/) |
 
 ## วิธีรัน
 
@@ -95,6 +95,7 @@ subst X: "D:\Year 3, Term 1 work\mobile app\FoodCourt SIET"
 - เสียงเตือนออเดอร์ใหม่: ดัง + สั่นซ้ำทุก 3 วินาที และมีแถบแดงทุกแท็บ จนกว่าร้านจะกดรับหรือปฏิเสธออเดอร์ใหม่ครบ (แอปต้องเปิดอยู่)
 - เมนู: เพิ่ม แก้ไข ลบ สวิตช์มีขาย/หมด และใส่รูปเมนู (ถ่ายรูปหรือเลือกจากคลังภาพ)
 - การชำระเงิน: ดูสลิปของลูกค้า แล้วกดยืนยันรับเงินหรือปฏิเสธพร้อมเหตุผล / บันทึกรับเงินสด
+- รีวิว: คะแนนเฉลี่ย จำนวนรีวิวแยกตามดาว และรีวิวทุกอันจากลูกค้า อัปเดตทันที (Firestore, Android)
 - ร้านของฉัน: รูปร้าน (แสดงในแอปนักศึกษา) ชื่อเจ้าของร้าน เปลี่ยนรหัสผ่าน เวลาเปิด-ปิด เวลารอ คำอธิบายร้าน หมายเลขพร้อมเพย์ และออกจากระบบ
 
 **หลังบ้านร้านค้า (เว็บ)**
@@ -208,7 +209,8 @@ flutter build web --release --base-href /app/ --dart-define=API_URL=https://<URL
 - รีเซ็ตข้อมูลบน Turso: ใส่ `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` ใน `backend/.env` แล้ว `npm run seed`
 
 ## การทดสอบ + CI
-- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 119 · แอปร้านค้า 45 · Firestore rules 15 เทสต์ coverage ทุกส่วน > 90%
+- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 119 · แอปร้านค้า 57 · Firestore rules 15 เทสต์ coverage ทุกส่วน > 90%
+- Flowchart การทำงาน (PNG ใส่สไลด์ได้): [docs/flowcharts/](docs/flowcharts/) · สรุปโปรเจกต์: [docs/PROJECT_SUMMARY.md](docs/PROJECT_SUMMARY.md)
 - GitHub Actions รันเทสต์ + build APK ทุกครั้งที่ push / เปิด PR — รายละเอียดและวิธีรันเอง: [docs/TESTING.md](docs/TESTING.md)
 - แบบฟอร์มรายงาน Usability Testing: [docs/USABILITY_TEST.md](docs/USABILITY_TEST.md)
 

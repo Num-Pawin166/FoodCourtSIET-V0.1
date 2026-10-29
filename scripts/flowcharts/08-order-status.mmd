@@ -1,0 +1,10 @@
+stateDiagram-v2
+    [*] --> pending: นักศึกษาสั่ง
+    pending --> accepted: ร้านรับ
+    accepted --> cooking: เริ่มทำ
+    cooking --> ready: ทำเสร็จ
+    ready --> completed: ลูกค้ารับแล้ว
+    pending --> cancelled: ลูกค้ายกเลิก / ร้านปฏิเสธ
+    accepted --> cancelled: ร้านยกเลิก
+    completed --> [*]
+    cancelled --> [*]

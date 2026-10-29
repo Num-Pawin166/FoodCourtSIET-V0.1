@@ -1,0 +1,20 @@
+sequenceDiagram
+    actor U as นักศึกษา
+    participant App as แอปนักศึกษา
+    participant G as Google
+    participant API as REST API
+    participant DB as Turso
+
+    U->>App: กด เข้าสู่ระบบด้วย Google
+    App->>G: ขอเลือกบัญชี (จำกัดโดเมน kmitl.ac.th)
+    G-->>App: ID token
+    App->>API: POST /auth/google { idToken }
+    API->>G: ตรวจลายเซ็น token
+    API->>API: ตรวจซ้ำ: hd = kmitl.ac.th และอีเมลยืนยันแล้ว
+    alt ไม่ใช่ @kmitl.ac.th
+        API-->>App: 403 ปฏิเสธ
+    else ถูกต้อง
+        API->>DB: หาหรือสร้างบัญชี (ผูกกับรหัสนักศึกษาเดิมถ้ามี)
+        API-->>App: JWT + ข้อมูลผู้ใช้
+        App->>App: เก็บ token แล้วไปหน้าแรก
+    end

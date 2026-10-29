@@ -15,6 +15,7 @@ class AppColors {
   static const green = Color(0xFF1F8A4C);
   static const kmitl = Color(0xFF2E8B57);
   static const red = Color(0xFFE5484D);
+  static const amber = Color(0xFFF5A524); // ดาวรีวิว
 }
 
 ThemeData buildTheme() {

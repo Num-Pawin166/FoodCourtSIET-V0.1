@@ -1,0 +1,10 @@
+flowchart LR
+    P([git push]) --> GA[GitHub Actions]
+    GA --> J1[Backend<br/>เทสต์ + coverage ≥ 70%<br/>+ เช็กเซิร์ฟเวอร์เปิดได้]
+    GA --> J2[Firestore rules<br/>เทสต์บน Emulator]
+    GA --> J3[Student app<br/>analyze → test → coverage → build APK]
+    GA --> J4[Vendor app<br/>analyze → test → coverage → build APK]
+    J1 & J2 & J3 & J4 --> R{ผ่านทั้งหมด?}
+    R -- ใช่ --> OK([✅ เขียว + ไฟล์ APK ให้ดาวน์โหลด])
+    R -- ไม่ --> NG([❌ แดง])
+    P --> RD[Render deploy API ใหม่อัตโนมัติ]

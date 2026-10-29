@@ -3,16 +3,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'models.dart';
 import 'order_alarm.dart';
+import 'reviews.dart';
 
 class AppState extends ChangeNotifier {
   final Api api;
   /// เสียงเตือนออเดอร์ใหม่ (หน้าออเดอร์สั่งดัง/หยุด)
   final OrderAlarm alarm;
+  /// รีวิวร้านบน Firestore (null = ปิดใช้ เช่น บนเว็บ หรือเชื่อม Firebase ไม่ได้)
+  final ReviewFeed? reviews;
   Vendor? user;
   bool restoring = true;
   int tab = 0;
 
-  AppState({Api? api, OrderAlarm? alarm})
+  AppState({Api? api, OrderAlarm? alarm, this.reviews})
       : api = api ?? Api(),
         alarm = alarm ?? OrderAlarm() {
     this.api.onUnauthorized = logout;

@@ -4,6 +4,7 @@ import '../app_state.dart';
 import '../theme.dart';
 import 'orders_screen.dart';
 import 'menu_screen.dart';
+import 'reviews_screen.dart';
 import 'shop_screen.dart';
 
 class VendorShell extends StatelessWidget {
@@ -12,6 +13,7 @@ class VendorShell extends StatelessWidget {
   static const _tabs = [
     (Icons.receipt_long_outlined, 'ออเดอร์'),
     (Icons.restaurant_menu, 'เมนู'),
+    (Icons.star_outline_rounded, 'รีวิว'),
     (Icons.storefront_outlined, 'ร้านของฉัน'),
   ];
 
@@ -43,7 +45,7 @@ class VendorShell extends StatelessWidget {
                 ),
               ),
             ),
-          Expanded(child: IndexedStack(index: state.tab, children: const [OrdersScreen(), MenuScreen(), ShopScreen()])),
+          Expanded(child: IndexedStack(index: state.tab, children: const [OrdersScreen(), MenuScreen(), ReviewsScreen(), ShopScreen()])),
         ]),
       ),
       bottomNavigationBar: SafeArea(

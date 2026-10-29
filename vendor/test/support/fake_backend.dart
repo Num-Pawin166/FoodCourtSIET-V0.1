@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foodcourt_vendor/api.dart';
 import 'package:foodcourt_vendor/app_state.dart';
 import 'package:foodcourt_vendor/order_alarm.dart';
+import 'package:foodcourt_vendor/reviews.dart';
 import 'package:foodcourt_vendor/theme.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -174,13 +177,24 @@ class FakeImagePicker extends ImagePickerPlatform {
 final tinyPng = Uint8List.fromList(base64Decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='));
 
-AppState fakeState(FakeVendorBackend backend, {FakeSound? sound}) {
+AppState fakeState(FakeVendorBackend backend, {FakeSound? sound, ReviewFeed? reviews}) {
   final s = sound ?? FakeSound();
-  return AppState(api: Api(client: backend.client), alarm: OrderAlarm(sound: () => s));
+  return AppState(api: Api(client: backend.client), alarm: OrderAlarm(sound: () => s), reviews: reviews);
 }
 
-Future<AppState> signedInState(FakeVendorBackend backend, {FakeSound? sound}) async {
-  final state = fakeState(backend, sound: sound);
+/// รีวิวบน Firestore จำลอง (fake_cloud_firestore)
+ReviewFeed fakeFeed(FakeFirebaseFirestore db) => ReviewFeed(db, signIn: () async => 'vendor-uid');
+
+/// ใส่รีวิวลง Firestore จำลอง (เหมือนนักศึกษาเพิ่งรีวิวจากแอปนักศึกษา)
+Future<void> seedReview(FakeFirebaseFirestore db, int orderId, int rating,
+        {int shopId = 1, String name = 'สมชาย ใ.', String comment = '', int day = 1}) =>
+    db.collection('reviews').doc('order_$orderId').set({
+      'shopId': shopId, 'orderId': orderId, 'rating': rating, 'comment': comment, 'authorName': name,
+      'authorUid': 'student-$orderId', 'updatedAt': Timestamp.fromDate(DateTime(2026, 10, day, 12)),
+    });
+
+Future<AppState> signedInState(FakeVendorBackend backend, {FakeSound? sound, ReviewFeed? reviews}) async {
+  final state = fakeState(backend, sound: sound, reviews: reviews);
   await state.login('shopa', '1234');
   state.restoring = false;
   return state;
