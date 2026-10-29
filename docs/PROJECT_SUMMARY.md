@@ -10,6 +10,9 @@
 | แอปนักศึกษาแบบเว็บ | https://foodcourt-siet.onrender.com/app/ |
 | Source code | https://github.com/Num-Pawin166/FoodCourtSIET-V0.1 |
 
+> แผนภาพในไฟล์นี้เขียนด้วย Mermaid ซึ่ง GitHub แสดงเป็นรูปให้อัตโนมัติ
+> ถ้าดูใน VS Code ต้องติดตั้งส่วนขยาย "Markdown Preview Mermaid Support" ก่อน
+
 ---
 
 ## 1. ปัญหาที่ระบบนี้แก้
@@ -19,35 +22,84 @@
 - ร้านค้ารับออเดอร์ปากเปล่า อาจจดผิดหรือตกหล่น
 - ร้านค้าไม่มีสรุปยอดขายรายวัน และศูนย์อาหารไม่มีข้อมูลภาพรวม
 
-## 2. ส่วนประกอบของระบบ
+## 2. เทคโนโลยีที่ใช้ แยกตามส่วน
 
-| ส่วน | ผู้ใช้ | เทคโนโลยี | โฟลเดอร์ |
+### 2.1 ส่วนของระบบ
+
+| ส่วน | ผู้ใช้ | เทคโนโลยีหลัก | ไลบรารีสำคัญ และใช้ทำอะไร | โฟลเดอร์ |
+|---|---|---|---|---|
+| **แอปนักศึกษา** (Android + เว็บ) | นักศึกษา / บุคลากร | Flutter 3.44 (Dart) · Material 3 | `http` เรียก API · `provider` เก็บสถานะแอป · `google_sign_in` ล็อกอิน Google · `sqflite` ฐานข้อมูลในเครื่อง · `cloud_firestore` + `firebase_auth` รีวิวร้าน · `qr_flutter` QR พร้อมเพย์ · `image_picker` แนบสลิป · `google_fonts` ฟอนต์ Prompt | `mobile/` |
+| **แอปร้านค้า** "FoodCourt ร้านค้า" (Android) | เจ้าของร้าน | Flutter 3.44 (Dart) · Material 3 | `http` · `provider` · `audioplayers` เสียงเตือนออเดอร์ใหม่ · `image_picker` ถ่ายรูปเมนู/รูปร้าน | `vendor/` |
+| **เว็บหลังบ้าน** | ผู้ดูแล (และร้านค้า) | HTML / CSS / JavaScript ล้วน ไม่ต้อง build | — | `backend/public/` |
+| **REST API** | ทุกแอป | Node.js 22+ · Express 5 | `@libsql/client` ต่อฐานข้อมูล · `jsonwebtoken` ออก/ตรวจ token · `bcryptjs` เข้ารหัสรหัสผ่าน · `google-auth-library` ตรวจ token ของ Google · `cors` | `backend/src/` |
+| **Security rules ของ Firestore** | — | Firestore Rules v2 | `firebase-tools` (Emulator) · `@firebase/rules-unit-testing` สำหรับเทสต์ | `firestore/` |
+
+### 2.2 บริการภายนอกที่เชื่อมต่อ
+
+| บริการ | ทำหน้าที่ | ใครเรียกใช้ | ไฟล์ที่เกี่ยวข้อง |
 |---|---|---|---|
-| แอปนักศึกษา (Android + เว็บ) | นักศึกษา / บุคลากร | Flutter | `mobile/` |
-| แอปร้านค้า "FoodCourt ร้านค้า" (Android) | เจ้าของร้าน | Flutter | `vendor/` |
-| เว็บหลังบ้าน | ผู้ดูแล | HTML / CSS / JavaScript | `backend/public/` |
-| REST API | ทุกแอป | Node.js 22 + Express 5 + JWT | `backend/src/` |
-| ฐานข้อมูล | — | Turso (libSQL / SQLite บน cloud) | — |
-| รีวิวร้าน | นักศึกษา | Cloud Firestore + Firebase Auth (anonymous) | `mobile/lib/reviews.dart`, `firestore/` |
-| AI แนะนำเมนู | นักศึกษา | Google Gemini | `backend/src/routes/ai.js` |
+| **Render** (free, Singapore) | รัน REST API + เว็บหลังบ้าน + แอปนักศึกษาแบบเว็บ, deploy เองเมื่อ push | — | `render.yaml` |
+| **Turso** (libSQL, free, Singapore) | **ฐานข้อมูลหลัก**: ผู้ใช้ ร้าน เมนู ออเดอร์ การชำระเงิน รูปภาพ | REST API | `backend/src/db.js` |
+| **Google Gemini** (3.5 Flash → Flash-Lite) | AI แนะนำเมนู | REST API | `backend/src/routes/ai.js` |
+| **Google Sign-In** | ล็อกอินด้วยบัญชี @kmitl.ac.th | แอปนักศึกษา → REST API ตรวจซ้ำ | `mobile/lib/google_auth.dart`, `backend/src/routes/auth.js` |
+| **Firebase: Cloud Firestore + Authentication** | รีวิวร้านแบบ real-time (ล็อกอิน anonymous ให้อัตโนมัติ) | แอปนักศึกษาเรียกตรง | `mobile/lib/reviews.dart`, `firestore/firestore.rules` |
+| **GitHub Actions** | CI: เทสต์ + วัด coverage + build APK ทุกครั้งที่ push | — | `.github/workflows/ci.yml` |
 
-### ภาพรวมการเชื่อมต่อ
+### 2.3 ฐานข้อมูล 3 แบบ ใช้ต่างกันอย่างไร
 
+| ฐานข้อมูล | อยู่ที่ | เก็บอะไร | ทำไมใช้ตัวนี้ |
+|---|---|---|---|
+| **Turso** | cloud | ข้อมูลหลักทั้งหมด | ข้อมูลเงินและออเดอร์ต้องผ่านเซิร์ฟเวอร์ที่ตรวจสิทธิ์และคำนวณราคาเอง |
+| **Cloud Firestore** | cloud (Google) | รีวิวร้าน | ทุกคนเห็นข้อมูลชุดเดียวกัน อัปเดตทันทีแบบ real-time |
+| **SQLite** (sqflite) | ในมือถือ | ตะกร้า ออเดอร์ล่าสุด แชต AI | ข้อมูลส่วนตัวที่ต้องใช้ได้แม้ไม่มีเน็ต |
+
+### 2.4 เครื่องมือพัฒนาและทดสอบ
+
+| ใช้ทำอะไร | เครื่องมือ |
+|---|---|
+| เทสต์ backend | `node --test` (มีใน Node.js) + coverage ในตัว |
+| เทสต์แอป Flutter | `flutter_test` · `http/testing` (MockClient) · `sqflite_common_ffi` (SQLite จริงบนคอม) · `fake_cloud_firestore` · `fake_async` |
+| เทสต์ security rules | Firestore Emulator ของ Google |
+| ตรวจ coverage ≥ 70% | `scripts/check_coverage.py` |
+| CI | GitHub Actions (Ubuntu, Node 24, Java 17, Flutter 3.44.5) |
+
+## 3. สถาปัตยกรรมระบบ
+
+```mermaid
+flowchart LR
+    subgraph Client["ฝั่งผู้ใช้"]
+        S["📱 แอปนักศึกษา<br/>Flutter"]
+        V["📱 แอปร้านค้า<br/>Flutter"]
+        W["💻 เว็บหลังบ้าน<br/>HTML/JS"]
+        L[("SQLite<br/>ในมือถือ")]
+    end
+
+    subgraph Render["Render (Singapore)"]
+        API["REST API<br/>Node.js + Express"]
+    end
+
+    T[("Turso<br/>ฐานข้อมูลหลัก")]
+    G["Google Gemini<br/>AI แนะนำเมนู"]
+    GS["Google Sign-In"]
+    F[("Cloud Firestore<br/>รีวิวร้าน")]
+    FA["Firebase Auth<br/>anonymous"]
+
+    S <--> L
+    S -- "HTTPS + JWT" --> API
+    V -- "HTTPS + JWT" --> API
+    W -- "HTTPS + JWT" --> API
+    S -- "ขอ ID token" --> GS
+    API -- "ตรวจ token / โดเมน" --> GS
+    API <--> T
+    API --> G
+    S <-- "real-time" --> F
+    S --> FA
 ```
- แอปนักศึกษา ─┬──────────────────────────► Cloud Firestore (รีวิวร้าน, real-time)
-               │
- แอปร้านค้า  ──┼──► REST API (Render) ──► ฐานข้อมูล Turso (Singapore)
- เว็บหลังบ้าน ──┘          │
-                           ├──► Google Gemini (AI แนะนำเมนู)
-                           └──► Google Sign-In (ตรวจบัญชี @kmitl.ac.th)
-```
 
-### การ deploy (ฟรีทั้งหมด)
-- **Render** (free plan, Singapore): รัน API และเว็บหลังบ้าน deploy อัตโนมัติเมื่อ push ขึ้น GitHub
-- **Turso** (free plan, Singapore): ฐานข้อมูล เก็บข้อมูลทั้งหมดรวมถึงรูปเมนูและสลิป
-- **แอป Android:** แจกเป็นไฟล์ APK
+**หลักการ:** แอปไม่เคยต่อ Turso หรือ Gemini ตรงๆ ทุกอย่างผ่าน REST API ซึ่งตรวจสิทธิ์และคำนวณราคาเอง
+ยกเว้นรีวิวที่แอปต่อ Firestore ตรง โดยมี security rules คุมสิทธิ์แทน
 
-## 3. ฟีเจอร์หลัก
+## 4. ฟีเจอร์หลัก
 
 ### แอปนักศึกษา
 | ฟีเจอร์ | รายละเอียด |
@@ -60,6 +112,7 @@
 | ติดตามออเดอร์ | เลขคิว (เช่น A-027) จำนวนคิวก่อนหน้า และไทม์ไลน์สถานะที่อัปเดตทุก 5 วินาที |
 | ประวัติ | ดูออเดอร์เก่า และกด "สั่งอีกครั้ง" |
 | **รีวิวร้าน** | รับอาหารแล้วให้ดาว 1–5 พร้อมความคิดเห็น (แก้ได้) ทุกคนเห็นคะแนนเฉลี่ยและรีวิวล่าสุดในหน้าร้านทันที (Android) |
+| ใช้ได้ตอนออฟไลน์ | ตะกร้ายังอยู่หลังปิดแอป และยังเห็นเลขคิวแม้เน็ตหลุด |
 | บัญชีของฉัน | จำนวนออเดอร์และยอดใช้จ่ายเดือนนี้ เมนูโปรด |
 
 ### แอปร้านค้า
@@ -79,26 +132,153 @@
 - **จัดการผู้ใช้:** สร้างบัญชีร้านค้า ผูกบัญชีกับร้าน รีเซ็ตรหัสผ่าน ระงับบัญชี
 - **ออเดอร์ทั้งหมด:** กรองตามร้าน สถานะ หรือวันที่ และดูสถานะการชำระเงิน
 
-## 4. ขั้นตอนการทำงานหลัก
+## 5. Flowchart การทำงาน
 
-### สถานะออเดอร์
+### 5.1 ภาพรวม: ตั้งแต่สั่งจนรับอาหาร
+
+```mermaid
+flowchart TD
+    A([นักศึกษาเปิดแอป]) --> B{ล็อกอินอยู่แล้ว?}
+    B -- ไม่ --> C[ล็อกอิน Google @kmitl.ac.th<br/>หรือรหัสผ่าน] --> D
+    B -- ใช่ --> D[หน้าแรก: รายชื่อร้าน คิว เวลารอ]
+    D --> E{เลือกเองหรือให้ AI ช่วย?}
+    E -- เลือกเอง --> F[เปิดหน้าร้าน]
+    E -- AI --> AI[พิมพ์ความต้องการ<br/>เช่น งบ 50 ไม่เผ็ด] --> AI2[AI แนะนำเมนูจริง] --> F
+    F --> G[ใส่ตะกร้า<br/>บันทึกลง SQLite ในเครื่อง]
+    G --> H[เลือกเวลารับ + หมายเหตุ + วิธีจ่าย]
+    H --> I[ยืนยัน → POST /orders]
+    I --> J[เซิร์ฟเวอร์คิดราคาเอง ออกเลขคิว A-001<br/>บันทึกลง Turso]
+    J --> K{จ่ายแบบไหน?}
+    K -- พร้อมเพย์ --> P[แสดง QR → โอน → แนบสลิป]
+    K -- จ่ายที่ร้าน --> Q
+    P --> Q[แอปร้านค้าเช็กทุก 5 วินาที<br/>เจอออเดอร์ใหม่ → เสียงเตือนดังซ้ำ]
+    Q --> R{ร้านรับออเดอร์?}
+    R -- ปฏิเสธ --> X([ยกเลิก แจ้งเหตุผลลูกค้า])
+    R -- รับ --> S[กำลังทำ → พร้อมรับ]
+    S --> T[นักศึกษาเห็นสถานะ "พร้อมรับ"<br/>แอปเช็กทุก 5 วินาที]
+    T --> U[แสดงเลขคิวที่ร้าน → ร้านกด "ลูกค้ารับแล้ว"]
+    U --> V[ออเดอร์ย้ายไปแท็บประวัติ]
+    V --> W[ให้คะแนนร้าน → บันทึกลง Firestore<br/>ทุกคนเห็นในหน้าร้านทันที]
+    W --> Z([จบ])
 ```
-pending ──ร้านรับ──► accepted ──เริ่มทำ──► cooking ──ทำเสร็จ──► ready ──ลูกค้ารับ──► completed
-   │                    │
-   └────► cancelled ◄───┘   ลูกค้ายกเลิกได้เฉพาะตอน pending / ร้านยกเลิกได้ถึง accepted
+
+### 5.2 การเข้าสู่ระบบด้วย Google
+
+```mermaid
+sequenceDiagram
+    actor U as นักศึกษา
+    participant App as แอปนักศึกษา
+    participant G as Google
+    participant API as REST API
+    participant DB as Turso
+
+    U->>App: กด "เข้าสู่ระบบด้วย Google"
+    App->>G: ขอเลือกบัญชี (จำกัดโดเมน hd=kmitl.ac.th)
+    G-->>App: ID token
+    App->>API: POST /auth/google { idToken }
+    API->>G: ตรวจลายเซ็น token
+    API->>API: ตรวจซ้ำ: hd = kmitl.ac.th, อีเมลยืนยันแล้ว
+    alt ไม่ใช่ @kmitl.ac.th
+        API-->>App: 403 ปฏิเสธ
+    else ถูกต้อง
+        API->>DB: หา/สร้างบัญชี (ผูกกับรหัสนักศึกษาเดิมถ้ามี)
+        API-->>App: JWT + ข้อมูลผู้ใช้
+        App->>App: เก็บ token แล้วไปหน้าแรก
+    end
 ```
+
+### 5.3 การชำระเงินด้วยพร้อมเพย์
+
+```mermaid
+flowchart TD
+    A[สั่งอาหารแบบโอนพร้อมเพย์] --> B[เซิร์ฟเวอร์สร้าง QR<br/>มาตรฐาน EMVCo ใส่ยอดเงินให้]
+    B --> C[นักศึกษาสแกนจ่ายในแอปธนาคาร]
+    C --> D[แนบสลิป<br/>เซิร์ฟเวอร์ตรวจว่าเป็นรูปจริง ≤ 2 MB]
+    D --> E[สถานะ: รอร้านตรวจสลิป]
+    E --> F{ร้านดูสลิป}
+    F -- ถูกต้อง --> G([ชำระเงินแล้ว ✅])
+    F -- ไม่ถูกต้อง --> H[ปฏิเสธพร้อมเหตุผล<br/>เช่น ยอดไม่ตรง]
+    H --> D
+```
+
+- เงินเข้าบัญชีร้านโดยตรง ไม่ผ่านระบบ และไม่ต้องสมัครบริการไหน
+- สลิปเปิดดูได้แค่เจ้าของออเดอร์และร้านของออเดอร์นั้น
+
+### 5.4 AI แนะนำเมนู
+
+```mermaid
+flowchart TD
+    A[นักศึกษาพิมพ์: งบ 50 ไม่เผ็ด] --> B[POST /ai/chat]
+    B --> C{เกิน 10 ครั้ง/นาที?}
+    C -- ใช่ --> C1([429 รอสักครู่])
+    C -- ไม่ --> D[ดึงจาก Turso: ร้านที่เปิดอยู่<br/>เมนูที่ยังมีขาย ราคา คิวตอนนี้]
+    D --> E[ส่งให้ Gemini 3.5 Flash<br/>พร้อมคำสั่งให้เลือกจากเมนูนี้เท่านั้น]
+    E --> F{สำเร็จ?}
+    F -- ไม่ --> G[ลอง Gemini Flash-Lite]
+    G --> H{สำเร็จ?}
+    H -- ไม่ --> I[ตัวแนะนำแบบกฎ<br/>กรองงบ ความเผ็ด หมู หมวด]
+    F -- ใช่ --> J
+    H -- ใช่ --> J
+    I --> J[ตรวจว่าเมนูที่ได้มีอยู่จริงและยังขาย]
+    J --> K[แอปแสดงการ์ดเมนูพร้อมเหตุผล]
+    K --> L[กดการ์ด → ไปหน้าร้าน → สั่งต่อได้ทันที]
+```
+
+### 5.5 รีวิวร้าน (Firestore)
+
+```mermaid
+sequenceDiagram
+    actor A as นักศึกษา A
+    participant App as แอป A
+    participant FA as Firebase Auth
+    participant FS as Cloud Firestore
+    participant B as แอปของนักศึกษา B
+
+    B->>FS: เปิดหน้าร้าน → ฟังรีวิวของร้านนี้ (snapshots)
+    A->>App: แท็บประวัติ → "ให้คะแนนร้าน" → 4 ดาว + ความคิดเห็น
+    App->>FA: ล็อกอิน anonymous (ครั้งแรกครั้งเดียว)
+    FA-->>App: uid
+    App->>FS: set reviews/order_101 { rating, comment, authorUid = uid, ... }
+    FS->>FS: Security rules ตรวจ: เจ้าของจริง, คะแนน 1–5, ความยาว, ฟิลด์ครบ
+    FS-->>App: บันทึกแล้ว → การ์ดขึ้น "รีวิวแล้ว"
+    FS-->>B: ส่งรีวิวใหม่ให้ทันที → คะแนนเฉลี่ยอัปเดต
+```
+
+### 5.6 สถานะออเดอร์
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending: นักศึกษาสั่ง
+    pending --> accepted: ร้านรับ
+    accepted --> cooking: เริ่มทำ
+    cooking --> ready: ทำเสร็จ
+    ready --> completed: ลูกค้ารับแล้ว
+    pending --> cancelled: ลูกค้ายกเลิก / ร้านปฏิเสธ
+    accepted --> cancelled: ร้านยกเลิก
+    completed --> [*]
+    cancelled --> [*]
+```
+
+- ลูกค้ายกเลิกได้เฉพาะตอน `pending` / ร้านยกเลิกได้ถึง `accepted`
 - เลขคิวรีเซ็ตทุกวันแยกตามร้าน: `{รหัสร้าน}-{ลำดับ}` เช่น A-001
 - เวลาทั้งหมดคำนวณตามเวลาไทย (Asia/Bangkok)
 
-### การชำระเงินแบบโอนพร้อมเพย์
-```
-นักศึกษาเลือก "โอนพร้อมเพย์" → แอปแสดง QR (มียอดเงิน) → โอนผ่านแอปธนาคาร → แนบสลิป
-      → ร้านดูสลิป → ยืนยันรับเงิน ✅  หรือ  ปฏิเสธพร้อมเหตุผล ❌ → นักศึกษาแนบสลิปใหม่
-```
-- ระบบสร้าง QR เองตามมาตรฐาน Thai QR Payment (EMVCo) ไม่ต้องสมัครบริการไหน และเงินเข้าบัญชีร้านโดยตรง
-- ทดสอบแล้วว่า QR ที่แสดงในแอปอ่านค่ากลับมาได้ถูกต้อง (หมายเลขพร้อมเพย์ ยอดเงิน และค่าตรวจสอบ CRC)
+### 5.7 การทำงานของ CI (ทุกครั้งที่ push)
 
-## 5. ความปลอดภัย
+```mermaid
+flowchart LR
+    P([git push]) --> GA[GitHub Actions]
+    GA --> J1[Backend<br/>เทสต์ + coverage ≥ 70%<br/>+ เช็กเซิร์ฟเวอร์เปิดได้]
+    GA --> J2[Firestore rules<br/>เทสต์บน Emulator]
+    GA --> J3[Student app<br/>analyze → test → coverage → build APK]
+    GA --> J4[Vendor app<br/>analyze → test → coverage → build APK]
+    J1 & J2 & J3 & J4 --> R{ผ่านทั้งหมด?}
+    R -- ใช่ --> OK([✅ เขียว + ไฟล์ APK ให้ดาวน์โหลด])
+    R -- ไม่ --> NG([❌ แดง])
+    P --> RD[Render deploy API ใหม่อัตโนมัติ]
+```
+
+## 6. ความปลอดภัย
 - รหัสผ่านเก็บแบบเข้ารหัส (bcrypt) และยืนยันตัวตนด้วย JWT
 - สิทธิ์ 3 ระดับ (นักศึกษา / ร้านค้า / ผู้ดูแล) แต่ละ API ตรวจสิทธิ์ทุกครั้ง และร้านค้าเห็นแค่ข้อมูลร้านตัวเอง
 - **ราคาคำนวณที่เซิร์ฟเวอร์เสมอ** แก้ราคาจากฝั่งแอปไม่ได้
@@ -106,10 +286,16 @@ pending ──ร้านรับ──► accepted ──เริ่มท�
 - **ตรวจไฟล์รูปจากเนื้อไฟล์จริง** ไม่เชื่อนามสกุลไฟล์ (รับเฉพาะ JPG / PNG / WebP ไม่เกิน 2 MB)
 - **ป้องกันการกดชนกัน** เช่น ลูกค้ายกเลิกพร้อมกับที่ร้านกดรับออเดอร์
 - จำกัดการถาม AI 10 ครั้งต่อนาทีต่อคน และไม่ส่งข้อมูลส่วนตัวให้ AI
+- **Firestore security rules:**
+  - อ่านได้เมื่อล็อกอิน / สร้างได้เฉพาะในชื่อตัวเอง / แก้ได้เฉพาะเจ้าของ / ห้ามลบ
+  - ตรวจชนิดข้อมูล ช่วงคะแนน และความยาวทุกฟิลด์
+  - collection อื่นปิดทั้งหมด
+- ออกจากระบบแล้วล้างข้อมูลในเครื่องทั้งหมด (กันคนถัดไปที่ใช้มือถือเครื่องเดียวกัน)
 - ความลับ (Gemini key, Turso token, JWT secret) เก็บใน environment variable ไม่อยู่ในโค้ด
 
+## 7. ฐานข้อมูล
 
-## 6. ฐานข้อมูล
+**Turso (ฐานข้อมูลหลัก)** — `backend/src/db.js`
 
 | ตาราง | เก็บอะไร |
 |---|---|
@@ -121,7 +307,7 @@ pending ──ร้านรับ──► accepted ──เริ่มท�
 | `favorites` | เมนูโปรดของนักศึกษา |
 | `images` | รูปเมนู รูปร้าน และสลิป |
 
-**ฐานข้อมูลในเครื่อง (SQLite บนมือถือ ผ่าน sqflite)** — `mobile/lib/local_db.dart`
+**SQLite ในมือถือ (sqflite)** — `mobile/lib/local_db.dart`
 
 | ตาราง | เก็บอะไร |
 |---|---|
@@ -137,14 +323,68 @@ pending ──ร้านรับ──► accepted ──เริ่มท�
 |---|---|
 | `reviews/order_<เลขออเดอร์>` | `shopId`, `orderId`, `rating` (1–5), `comment` (≤ 300 ตัว), `authorName` (ชื่อย่อ เช่น "สมชาย ใ."), `authorUid`, `updatedAt` (เวลาเซิร์ฟเวอร์) |
 
-- **ใช้ฐานข้อมูลแต่ละแบบต่างกันอย่างไร:** SQLite ในเครื่องเก็บข้อมูลส่วนตัวที่ต้องใช้ได้แม้ไม่มีเน็ต / Firestore เก็บข้อมูลที่ทุกคนเห็นร่วมกันและอัปเดตแบบ real-time / Turso เก็บข้อมูลหลักของระบบ (ออเดอร์ เงิน เมนู)
-- แอปล็อกอิน Firebase แบบ anonymous ให้อัตโนมัติ เพื่อให้ security rules รู้ว่าใครเป็นเจ้าของรีวิว
-- **Security rules** (`firestore/firestore.rules`): อ่านได้เมื่อล็อกอิน / สร้างได้เฉพาะในชื่อตัวเอง / แก้ได้เฉพาะเจ้าของ / ห้ามลบ / ตรวจชนิดข้อมูล ช่วงคะแนน และความยาวทุกฟิลด์ / collection อื่นปิดทั้งหมด
+- 1 ออเดอร์รีวิวได้ครั้งเดียว ส่งซ้ำ = แก้รีวิวเดิม
 - เว็บไม่มีส่วนรีวิว เพราะตั้งค่า Firebase ไว้สำหรับ Android เท่านั้น
 
-**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 274 เทสต์ coverage ทุกส่วนเกิน 90% (รวม security rules ของ Firestore ที่ทดสอบบน Firestore Emulator) และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
+## 8. โครงสร้างโปรเจกต์
 
-## 7. บัญชีทดลอง
+```
+FoodCourt SIET/
+├── .github/workflows/
+│   └── ci.yml                  # GitHub Actions: test + coverage + build APK
+├── backend/                    # REST API + เว็บหลังบ้าน (Node.js)
+│   ├── src/
+│   │   ├── server.js           # จุดเริ่ม: เตรียมฐานข้อมูล แล้วเปิดพอร์ต
+│   │   ├── app.js              # ประกอบ Express: route, error handler, ไฟล์ static
+│   │   ├── db.js               # ต่อ Turso / ไฟล์ SQLite + สร้างตาราง
+│   │   ├── seed.js             # ข้อมูลตัวอย่าง (ร้าน A–E, บัญชีทดลอง)
+│   │   ├── promptpay.js        # สร้าง QR พร้อมเพย์ (EMVCo + CRC16)
+│   │   ├── images.js           # ตรวจและเก็บรูป (เมนู/ร้าน/สลิป)
+│   │   ├── util.js             # เวลาไทย, ช่วงเวลารับอาหาร, สถานะออเดอร์
+│   │   └── routes/
+│   │       ├── auth.js         # ล็อกอิน รหัสผ่าน/Google, JWT, โปรไฟล์
+│   │       ├── shops.js        # รายชื่อร้าน เมนู ช่วงเวลารับ (สาธารณะ)
+│   │       ├── orders.js       # สั่งอาหาร ยกเลิก ชำระเงิน แนบสลิป เมนูโปรด
+│   │       ├── vendor.js       # API ของร้านค้า: ออเดอร์ เมนู ข้อมูลร้าน สรุปยอด
+│   │       ├── admin.js        # API ผู้ดูแล: ภาพรวม ร้าน ผู้ใช้ ออเดอร์
+│   │       └── ai.js           # AI แนะนำเมนู (Gemini + ตัวสำรองแบบกฎ)
+│   ├── public/                 # เว็บหลังบ้าน (index.html, app.js, style.css)
+│   │   └── app/                # แอปนักศึกษาแบบเว็บ (build จาก mobile/)
+│   └── test/                   # unit / integration / security / google (97 เทสต์)
+├── mobile/                     # แอปนักศึกษา (Flutter)
+│   ├── lib/
+│   │   ├── main.dart           # จุดเริ่ม: เปิด Firebase แล้วรันแอป
+│   │   ├── app_state.dart      # สถานะกลาง: ผู้ใช้ ตะกร้า ออเดอร์ เมนูโปรด
+│   │   ├── api.dart            # เรียก REST API
+│   │   ├── models.dart         # Shop, MenuItem, Order, ...
+│   │   ├── local_db.dart       # SQLite ในเครื่อง
+│   │   ├── reviews.dart        # รีวิวร้านบน Firestore
+│   │   ├── firebase_options.dart
+│   │   ├── google_auth.dart    # Google Sign-In
+│   │   ├── theme.dart          # ธีม Material 3 + สี
+│   │   ├── widgets.dart        # วิดเจ็ตที่ใช้ซ้ำ
+│   │   └── screens/            # login, home, shop_menu, cart, payment,
+│   │                           # orders, ai_chat, profile, review_widgets, main_shell
+│   ├── test/                   # unit / widget / integration / security (117 เทสต์)
+│   └── android/app/google-services.json
+├── vendor/                     # แอปร้านค้า (Flutter)
+│   ├── lib/
+│   │   ├── main.dart · app_state.dart · api.dart · models.dart · theme.dart
+│   │   ├── order_alarm.dart    # เสียงเตือนดังซ้ำทุก 3 วินาที
+│   │   └── screens/            # login, orders, menu, shop, vendor_shell
+│   ├── assets/sounds/new_order.wav
+│   └── test/                   # unit / widget / integration / security (45 เทสต์)
+├── firestore/                  # Security rules ของ Firestore
+│   ├── firestore.rules
+│   ├── firebase.json           # ตั้งค่า Emulator
+│   └── test/rules.test.js      # เทสต์ rules บน Emulator (15 เทสต์)
+├── scripts/check_coverage.py   # ตรวจว่า coverage ≥ 70%
+├── docs/                       # เอกสารทั้งหมด (ไฟล์นี้, คู่มือ, การทดสอบ, เกณฑ์)
+├── render.yaml                 # ตั้งค่า deploy บน Render
+└── README.md
+```
+
+## 9. บัญชีทดลอง
 
 | บทบาท | ชื่อผู้ใช้ | รหัสผ่าน |
 |---|---|---|
@@ -154,7 +394,9 @@ pending ──ร้านรับ──► accepted ──เริ่มท�
 
 > ⚠️ รหัสผ่านเหล่านี้เปิดเผยใน repository ก่อนใช้งานจริงต้องเปลี่ยนทั้งหมด
 
-## 8. ข้อจำกัดและแนวทางพัฒนาต่อ
+**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 274 เทสต์ coverage ทุกส่วนเกิน 90% และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
+
+## 10. ข้อจำกัดและแนวทางพัฒนาต่อ
 
 | ข้อจำกัดตอนนี้ | แนวทางพัฒนาต่อ |
 |---|---|
