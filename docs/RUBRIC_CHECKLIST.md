@@ -10,10 +10,10 @@
 | 1 | Material 3 + Usability Testing | 3 | ⚠️ ทำ M3 แล้ว แต่ยังไม่ได้ทดสอบกับผู้ใช้ | **1.5** → 3 | ทดสอบกับคนจริง ≥ 5 คน แล้วกรอกรายงาน |
 | 2 | REST API / Firebase ≥ 2 บริการ | 3 | ✅ ครบ | **3** | — |
 | 3 | AI Feature | 3 | ✅ ครบ | **3** | — |
-| 4 | Local Database + Firestore | 3 | ⚠️ โค้ดเสร็จแล้ว แต่ยังไม่ได้เปิดใช้บน Firebase จริง | **1.5** → 3 | เปิด Anonymous Auth + Publish rules แล้วลองบนมือถือ |
+| 4 | Local Database + Firestore | 3 | ✅ SQLite ใช้งานได้ · Firestore เปิดใช้บน cloud แล้ว (Auth + rules ตรวจแล้วว่าทำงานจริง) | **3** | ลองรีวิวบนมือถือจริงให้สาธิตได้ |
 | 5 | Testing + Coverage ≥ 70% | 5 | ✅ ครบ 4 ประเภท · coverage 94–99% | **5** | — |
-| 6 | GitHub Actions CI | 3 | ✅ เขียว (รอบล่าสุดก่อนเพิ่ม Firestore) | **3** | push งาน Firestore แล้วเช็กว่ายังเขียวทั้ง 4 job |
-| | **รวม** | **20** | | **17 → 20** | |
+| 6 | GitHub Actions CI | 3 | ✅ เขียวครบ 4 job (รวมงาน Firestore) | **3** | — |
+| | **รวม** | **20** | | **18.5 → 20** | |
 
 ---
 
@@ -97,10 +97,17 @@
 - Firebase project `foodcourt-siet` เชื่อมแล้ว (`google-services.json`, `firebase_options.dart`)
 - มี security rules ใน `firestore/firestore.rules` และทดสอบแล้ว 15 เทสต์บน Firestore Emulator
 
-**ยังขาด (ต้องทำก่อนนำเสนอ)**
-1. ❌ Firebase Console → Authentication → Sign-in method → **Anonymous → Enable**
-2. ❌ Firestore → Rules → วางเนื้อหา `firestore/firestore.rules` → **Publish** (test mode จะหมดอายุใน 30 วัน)
-3. ❌ ลองบนมือถือจริง: สั่งอาหาร → ให้ร้านกด "ลูกค้ารับแล้ว" → รีวิว → เปิดหน้าร้านแล้วเห็นรีวิว และเห็นข้อมูลขึ้นใน Firebase Console
+**ตั้งค่าบน Firebase แล้ว (29 ต.ค.)**
+- ✅ เปิด Anonymous Auth แล้ว
+- ✅ Publish rules แล้ว
+- ตรวจกับ cloud จริงแล้ว:
+  - ไม่ล็อกอินอ่านไม่ได้ (403)
+  - ล็อกอินแล้วอ่านได้
+  - collection อื่นถูกปิด
+  - ให้คะแนน 9 ดาวถูกปฏิเสธ
+
+**ยังต้องทำ**
+- ⬜ ลองบนมือถือจริง: สั่งอาหาร → ให้ร้านกด "ลูกค้ารับแล้ว" → รีวิว → เปิดหน้าร้านแล้วเห็นรีวิว และเห็นข้อมูลขึ้นใน Firebase Console
 
 **สาธิตวันนำเสนอ**
 - **Local DB:** ใส่ตะกร้า → ปิดแอปทิ้ง → เปิดใหม่ ตะกร้ายังอยู่ / เปิดโหมดเครื่องบิน → ยังเห็นเลขคิว
@@ -152,10 +159,8 @@
 | Student app | analyze → test → coverage ≥ 70% → **build APK** |
 | Vendor app | analyze → test → coverage ≥ 70% → **build APK** |
 
-- รอบล่าสุดบน GitHub: ✅ เขียว (ก่อนเพิ่ม Firestore)
+- รอบล่าสุดบน GitHub ("Add shop reviews with Cloud Firestore…"): ✅ **เขียวครบทั้ง 4 job**
 - มี badge CI ใน README และดาวน์โหลด APK ได้จาก Artifacts
-
-**ยังต้องทำ:** commit + push งาน Firestore แล้วเช็กว่า**ทั้ง 4 job เขียว**
 
 **สาธิตวันนำเสนอ:** เปิดแท็บ Actions ให้ดูรอบที่เขียว แล้วกดเข้าไปดูแต่ละ job และไฟล์ APK ที่ได้
 
@@ -163,8 +168,8 @@
 
 ## เช็กลิสต์ก่อนวันนำเสนอ
 
-- [ ] push งาน Firestore → CI เขียวครบ 4 job
-- [ ] Firebase: เปิด Anonymous Auth + Publish rules
+- [x] push งาน Firestore → CI เขียวครบ 4 job
+- [x] Firebase: เปิด Anonymous Auth + Publish rules
 - [ ] ลองรีวิวบนมือถือจริงอย่างน้อย 1 ครั้ง (ให้มีรีวิวตัวอย่างค้างไว้)
 - [ ] Usability Testing ≥ 5 คน + กรอก USABILITY_TEST.md
 - [ ] ทำสไลด์ 6 ส่วนตามเกณฑ์ (ใช้หัวข้อในไฟล์นี้เป็นโครง)
