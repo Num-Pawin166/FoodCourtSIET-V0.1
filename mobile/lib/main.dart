@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app_state.dart';
+import 'reviews.dart';
 import 'theme.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 
-void main() {
-  runApp(ChangeNotifierProvider(create: (_) => AppState()..restore(), child: const FoodCourtApp()));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final reviews = await ReviewService.init();
+  runApp(ChangeNotifierProvider(create: (_) => AppState(reviews: reviews)..restore(), child: const FoodCourtApp()));
 }
 
 class FoodCourtApp extends StatelessWidget {

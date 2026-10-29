@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foodcourt_siet/api.dart';
 import 'package:foodcourt_siet/app_state.dart';
 import 'package:foodcourt_siet/local_db.dart';
+import 'package:foodcourt_siet/reviews.dart';
 import 'package:foodcourt_siet/theme.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -69,6 +71,15 @@ class FakeBackend {
       'created_at': '2026-10-20T04:00:00.000Z', 'accepted_at': null, 'cooking_at': null, 'ready_at': null,
       'completed_at': null, 'cancelled_at': null,
     };
+  }
+
+  /// ออเดอร์ที่ลูกค้ารับอาหารไปแล้ว (อยู่ในแท็บประวัติ รีวิวได้)
+  Map<String, dynamic> addCompletedOrder({int shopId = 1}) {
+    final o = _order({'shop_id': shopId, 'items': [{'menu_item_id': shopId == 1 ? 1 : 5, 'qty': 1}], 'pickup_time': '11:30'})
+      ..['status'] = 'completed'
+      ..['status_label'] = 'รับอาหารแล้ว';
+    orders.add(o);
+    return o;
   }
 
   http.Response _json(Object body, [int status = 200]) =>
@@ -169,12 +180,15 @@ class FakeBackend {
 }
 
 /// สร้าง AppState ที่ต่อกับ backend จำลอง + ฐานข้อมูลในหน่วยความจำ
-AppState fakeState(FakeBackend backend, {LocalStore? store}) =>
-    AppState(api: Api(client: backend.client), store: store ?? MemoryLocalStore());
+AppState fakeState(FakeBackend backend, {LocalStore? store, ReviewService? reviews}) =>
+    AppState(api: Api(client: backend.client), store: store ?? MemoryLocalStore(), reviews: reviews);
+
+/// รีวิวบน Firestore จำลอง (fake_cloud_firestore) ผู้ใช้ Firebase = uid
+ReviewService fakeReviews(FakeFirebaseFirestore db, {String uid = 'uid-me'}) => ReviewService(db, signIn: () async => uid);
 
 /// ล็อกอินไว้ก่อน (ข้ามหน้า Login)
-Future<AppState> signedInState(FakeBackend backend, {LocalStore? store}) async {
-  final state = fakeState(backend, store: store);
+Future<AppState> signedInState(FakeBackend backend, {LocalStore? store, ReviewService? reviews}) async {
+  final state = fakeState(backend, store: store, reviews: reviews);
   await state.login('65010001', '1234');
   state.restoring = false;
   return state;

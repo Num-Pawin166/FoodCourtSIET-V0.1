@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "39588856523",
+    "project_id": "foodcourt-siet",
+    "storage_bucket": "foodcourt-siet.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:39588856523:android:0629d20fc751561444114e",
+        "android_client_info": {
+          "package_name": "th.ac.kmitl.siet.foodcourt_siet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1njF7un5b4Jzf0FDcczxfrYl7Hjz5-Hs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

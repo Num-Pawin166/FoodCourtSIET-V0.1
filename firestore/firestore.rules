@@ -1,0 +1,46 @@
+rules_version = '2';
+
+// กฎความปลอดภัยของ Cloud Firestore — FoodCourt SIET
+// นำไปวางที่ Firebase Console → Firestore Database → Rules แล้วกด Publish
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // รีวิวร้าน: doc id = "order_<เลขออเดอร์>" (1 ออเดอร์ = 1 รีวิว)
+    match /reviews/{reviewId} {
+      // ต้องผ่าน Firebase Auth (แอปล็อกอินแบบ anonymous ให้เอง) จึงจะอ่านได้
+      allow read: if request.auth != null;
+
+      // สร้างได้เฉพาะในชื่อตัวเอง และ id ต้องตรงกับเลขออเดอร์
+      allow create: if request.auth != null
+        && isValidReview(request.resource.data)
+        && request.resource.data.authorUid == request.auth.uid
+        && reviewId == 'order_' + string(request.resource.data.orderId);
+
+      // แก้ได้เฉพาะเจ้าของ และห้ามย้ายรีวิวไปร้าน/ออเดอร์อื่น หรือเปลี่ยนเจ้าของ
+      allow update: if request.auth != null
+        && resource.data.authorUid == request.auth.uid
+        && isValidReview(request.resource.data)
+        && request.resource.data.authorUid == resource.data.authorUid
+        && request.resource.data.shopId == resource.data.shopId
+        && request.resource.data.orderId == resource.data.orderId;
+
+      // ไม่มีใครลบรีวิวผ่านแอปได้ (ผู้ดูแลลบผ่าน Console)
+      allow delete: if false;
+    }
+
+    function isValidReview(d) {
+      return d.keys().hasOnly(['shopId', 'orderId', 'rating', 'comment', 'authorName', 'authorUid', 'updatedAt'])
+        && d.shopId is int && d.orderId is int
+        && d.rating is int && d.rating >= 1 && d.rating <= 5
+        && d.comment is string && d.comment.size() <= 300
+        && d.authorName is string && d.authorName.size() > 0 && d.authorName.size() <= 60
+        && d.authorUid is string
+        && d.updatedAt == request.time;
+    }
+
+    // collection อื่นทั้งหมด: ปิด
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

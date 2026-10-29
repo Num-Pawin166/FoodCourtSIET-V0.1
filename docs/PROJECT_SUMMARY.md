@@ -28,16 +28,18 @@
 | เว็บหลังบ้าน | ผู้ดูแล | HTML / CSS / JavaScript | `backend/public/` |
 | REST API | ทุกแอป | Node.js 22 + Express 5 + JWT | `backend/src/` |
 | ฐานข้อมูล | — | Turso (libSQL / SQLite บน cloud) | — |
+| รีวิวร้าน | นักศึกษา | Cloud Firestore + Firebase Auth (anonymous) | `mobile/lib/reviews.dart`, `firestore/` |
 | AI แนะนำเมนู | นักศึกษา | Google Gemini | `backend/src/routes/ai.js` |
 
 ### ภาพรวมการเชื่อมต่อ
 
 ```
- แอปนักศึกษา ─┐
- แอปร้านค้า  ─┼──► REST API (Render) ──► ฐานข้อมูล Turso (Singapore)
- เว็บหลังบ้าน ─┘          │
-                          ├──► Google Gemini (AI แนะนำเมนู)
-                          └──► Google Sign-In (ตรวจบัญชี @kmitl.ac.th)
+ แอปนักศึกษา ─┬──────────────────────────► Cloud Firestore (รีวิวร้าน, real-time)
+               │
+ แอปร้านค้า  ──┼──► REST API (Render) ──► ฐานข้อมูล Turso (Singapore)
+ เว็บหลังบ้าน ──┘          │
+                           ├──► Google Gemini (AI แนะนำเมนู)
+                           └──► Google Sign-In (ตรวจบัญชี @kmitl.ac.th)
 ```
 
 ### การ deploy (ฟรีทั้งหมด)
@@ -57,6 +59,7 @@
 | ชำระเงิน | **โอนพร้อมเพย์** (QR มียอดเงินใส่ไว้แล้ว + แนบสลิป) หรือ**จ่ายที่ร้าน** |
 | ติดตามออเดอร์ | เลขคิว (เช่น A-027) จำนวนคิวก่อนหน้า และไทม์ไลน์สถานะที่อัปเดตทุก 5 วินาที |
 | ประวัติ | ดูออเดอร์เก่า และกด "สั่งอีกครั้ง" |
+| **รีวิวร้าน** | รับอาหารแล้วให้ดาว 1–5 พร้อมความคิดเห็น (แก้ได้) ทุกคนเห็นคะแนนเฉลี่ยและรีวิวล่าสุดในหน้าร้านทันที (Android) |
 | บัญชีของฉัน | จำนวนออเดอร์และยอดใช้จ่ายเดือนนี้ เมนูโปรด |
 
 ### แอปร้านค้า
@@ -128,7 +131,18 @@ pending ──ร้านรับ──► accepted ──เริ่มท�
 
 ข้อมูลในเครื่องทั้งหมดถูกล้างเมื่อออกจากระบบ
 
-**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 237 เทสต์ coverage ทุกส่วนเกิน 90% และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
+**Cloud Firestore (Firebase project `foodcourt-siet`)** — `mobile/lib/reviews.dart`
+
+| Collection | เก็บอะไร |
+|---|---|
+| `reviews/order_<เลขออเดอร์>` | `shopId`, `orderId`, `rating` (1–5), `comment` (≤ 300 ตัว), `authorName` (ชื่อย่อ เช่น "สมชาย ใ."), `authorUid`, `updatedAt` (เวลาเซิร์ฟเวอร์) |
+
+- **ใช้ฐานข้อมูลแต่ละแบบต่างกันอย่างไร:** SQLite ในเครื่องเก็บข้อมูลส่วนตัวที่ต้องใช้ได้แม้ไม่มีเน็ต / Firestore เก็บข้อมูลที่ทุกคนเห็นร่วมกันและอัปเดตแบบ real-time / Turso เก็บข้อมูลหลักของระบบ (ออเดอร์ เงิน เมนู)
+- แอปล็อกอิน Firebase แบบ anonymous ให้อัตโนมัติ เพื่อให้ security rules รู้ว่าใครเป็นเจ้าของรีวิว
+- **Security rules** (`firestore/firestore.rules`): อ่านได้เมื่อล็อกอิน / สร้างได้เฉพาะในชื่อตัวเอง / แก้ได้เฉพาะเจ้าของ / ห้ามลบ / ตรวจชนิดข้อมูล ช่วงคะแนน และความยาวทุกฟิลด์ / collection อื่นปิดทั้งหมด
+- เว็บไม่มีส่วนรีวิว เพราะตั้งค่า Firebase ไว้สำหรับ Android เท่านั้น
+
+**การทดสอบ:** มีเทสต์ 4 ประเภท (Unit / Widget / Integration / Security) รวม 274 เทสต์ coverage ทุกส่วนเกิน 90% (รวม security rules ของ Firestore ที่ทดสอบบน Firestore Emulator) และ GitHub Actions รันให้ทุกครั้งที่ push ดูรายละเอียดได้ที่ [TESTING.md](TESTING.md)
 
 ## 7. บัญชีทดลอง
 
@@ -149,3 +163,4 @@ pending ──ร้านรับ──► accepted ──เริ่มท�
 | แอปนักศึกษาต้องเปิดหน้าออเดอร์เพื่อดูสถานะ | แจ้งเตือนเมื่ออาหารพร้อม |
 | เซิร์ฟเวอร์ฟรีหลับเมื่อไม่มีคนใช้ 15 นาที (ครั้งแรกรอ 30–60 วินาที) | อัปเกรดเป็นแพ็กเกจเสียเงินเมื่อมีผู้ใช้จริง |
 | iPhone ใช้ผ่านเว็บ (Add to Home Screen) | Build แอป iOS บน Mac และเผยแพร่ผ่าน TestFlight / App Store |
+| รีวิวผูกกับบัญชี Firebase แบบ anonymous (ลงแอปใหม่ = แก้รีวิวเก่าไม่ได้) และยังไม่ได้ตรวจกับเซิร์ฟเวอร์ว่าเป็นเจ้าของออเดอร์จริง | ให้ backend ออก Firebase custom token ผูกกับบัญชีนักศึกษา แล้วตรวจใน rules |

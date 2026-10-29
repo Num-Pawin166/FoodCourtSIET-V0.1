@@ -5,6 +5,7 @@ import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'cart_screen.dart';
+import 'review_widgets.dart';
 
 class ShopMenuScreen extends StatefulWidget {
   final int? shopId;
@@ -75,6 +76,7 @@ class _ShopMenuScreenState extends State<ShopMenuScreen> {
         onRefresh: _load,
         child: CustomScrollView(slivers: [
           SliverToBoxAdapter(child: _Header(shop: shop)),
+          if (state.reviews != null) SliverToBoxAdapter(child: ShopReviews(shopId: shop.id)),
           const SliverToBoxAdapter(
             child: Padding(padding: EdgeInsets.fromLTRB(20, 20, 20, 8), child: Text('เมนูและราคา', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600))),
           ),

@@ -1,0 +1,15 @@
+{
+  "name": "foodcourt-firestore-rules",
+  "private": true,
+  "description": "Security rules ของ Cloud Firestore + เทสต์บน Firestore Emulator",
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-foodcourt \"node --test test/*.test.js\"",
+    "deploy": "firebase deploy --only firestore:rules --project foodcourt-siet"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.1.0",
+    "firebase-tools": "^13.35.1"
+  }
+}

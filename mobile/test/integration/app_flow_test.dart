@@ -1,8 +1,10 @@
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:foodcourt_siet/app_state.dart';
 import 'package:foodcourt_siet/local_db.dart';
 import 'package:foodcourt_siet/main.dart';
+import 'package:foodcourt_siet/reviews.dart';
 import 'package:foodcourt_siet/screens/login_screen.dart';
 import 'package:foodcourt_siet/screens/payment_screen.dart';
 import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
@@ -31,9 +33,9 @@ void main() {
     store = MemoryLocalStore();
   });
 
-  Future<AppState> launchApp(WidgetTester tester) async {
+  Future<AppState> launchApp(WidgetTester tester, {ReviewService? reviews}) async {
     usePhoneScreen(tester);
-    final state = fakeState(backend, store: store);
+    final state = fakeState(backend, store: store, reviews: reviews);
     await tester.pumpWidget(ChangeNotifierProvider(create: (_) => state..restore(), child: const FoodCourtApp()));
     await tester.pumpAndSettle();
     return state;
@@ -92,6 +94,37 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('A - 001'), findsOneWidget);
     expect((await store.cachedOrders(history: false))!.single['queue_no'], 'A-001');
+  });
+
+  testWidgets('รับอาหารแล้ว → รีวิวจากแท็บประวัติ → เพื่อนอีกคนเห็นรีวิวในหน้าร้าน (Firestore)', (tester) async {
+    final db = FakeFirebaseFirestore(); // Firestore ชุดเดียวกัน แต่ผู้ใช้ Firebase คนละคน
+    backend.addCompletedOrder();
+    await launchApp(tester, reviews: fakeReviews(db, uid: 'me'));
+    await login(tester);
+
+    await tester.tap(find.text('Orders'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ประวัติ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ให้คะแนนร้าน'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('5 ดาว'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'ขาหมูนุ่ม น้ำซุปดี');
+    await tester.tap(find.text('ส่งรีวิว'));
+    await tester.pumpAndSettle();
+    expect(find.text('รีวิวแล้ว · แตะเพื่อแก้'), findsOneWidget);
+
+    // เปิดแอปอีกเครื่อง (ผู้ใช้อื่น) → เห็นรีวิวในหน้าร้าน
+    await tester.pumpWidget(const SizedBox());
+    await launchApp(tester, reviews: fakeReviews(db, uid: 'friend'));
+    await tester.tap(find.text('Home'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ร้านข้าวขาหมูป้าแดง'));
+    await tester.pumpAndSettle();
+    expect(find.text('ขาหมูนุ่ม น้ำซุปดี'), findsOneWidget);
+    expect(find.text('สมชาย ใ.'), findsOneWidget);
+    expect(find.text('5.0'), findsOneWidget);
   });
 
   testWidgets('สั่งแบบจ่ายที่ร้าน → กลับหน้าคำสั่งซื้อพร้อมแจ้งเลขคิว', (tester) async {

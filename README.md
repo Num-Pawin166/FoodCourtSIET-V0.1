@@ -10,6 +10,7 @@
 | แอปร้านค้า "FoodCourt ร้านค้า" | ร้านค้า | Flutter | [vendor/](vendor/) |
 | เว็บหลังบ้าน | ร้านค้า, ผู้ดูแล | HTML/JS (ไม่ต้อง build) | [backend/public/](backend/public/) |
 | REST API + ฐานข้อมูล | — | Node.js 22.12+ · Express 5 · libSQL (Turso บน cloud / ไฟล์ SQLite ในเครื่อง) · JWT | [backend/src/](backend/src/) |
+| รีวิวร้าน | นักศึกษา | Cloud Firestore + Firebase Auth (anonymous) · security rules | [mobile/lib/reviews.dart](mobile/lib/reviews.dart), [firestore/](firestore/) |
 
 ## วิธีรัน
 
@@ -59,6 +60,14 @@ subst X: "D:\Year 3, Term 1 work\mobile app\FoodCourt SIET"
 ระบบตรวจ 2 ชั้น: หน้าเลือกบัญชีของ Google แสดงเฉพาะโดเมน kmitl.ac.th และ backend ตรวจ token ซ้ำว่า `hd = kmitl.ac.th` และอีเมลยืนยันแล้ว
 ล็อกอินครั้งแรก ระบบจะสร้างบัญชีให้อัตโนมัติ (ชื่อผู้ใช้ = ส่วนหน้าของอีเมล เช่น `65010001`) ถ้ามีบัญชีรหัสนักศึกษาเดียวกันอยู่แล้ว ระบบจะผูกเข้ากับบัญชีเดิม
 การสมัครด้วยรหัสผ่านถูกปิดไว้ แต่ยังล็อกอินด้วยรหัสผ่านได้สำหรับบัญชีร้านค้า แอดมิน และบัญชีทดลอง
+
+### ตั้งค่า Firestore (รีวิวร้าน)
+แอปต่อ Firebase project `foodcourt-siet` ไว้แล้ว ([mobile/lib/firebase_options.dart](mobile/lib/firebase_options.dart)) ทำที่ Firebase Console ครั้งเดียว:
+1. **Security → Authentication → Get started → Sign-in method → Anonymous → Enable**
+2. **Firestore Database → Rules** วางเนื้อหาไฟล์ [firestore/firestore.rules](firestore/firestore.rules) แล้วกด **Publish**
+   (หรือ `cd firestore && npm install && npx firebase login && npm run deploy`)
+
+ทดสอบ rules บนเครื่อง: `cd firestore && npm install && npm test` (ต้องมี Java 11+)
 
 ### บัญชีทดลอง
 
@@ -199,7 +208,7 @@ flutter build web --release --base-href /app/ --dart-define=API_URL=https://<URL
 - รีเซ็ตข้อมูลบน Turso: ใส่ `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` ใน `backend/.env` แล้ว `npm run seed`
 
 ## การทดสอบ + CI
-- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 95 · แอปร้านค้า 45 เทสต์ coverage ทุกส่วน > 90%
+- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 117 · แอปร้านค้า 45 · Firestore rules 15 เทสต์ coverage ทุกส่วน > 90%
 - GitHub Actions รันเทสต์ + build APK ทุกครั้งที่ push / เปิด PR — รายละเอียดและวิธีรันเอง: [docs/TESTING.md](docs/TESTING.md)
 - แบบฟอร์มรายงาน Usability Testing: [docs/USABILITY_TEST.md](docs/USABILITY_TEST.md)
 

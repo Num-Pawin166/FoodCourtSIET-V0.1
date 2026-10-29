@@ -7,6 +7,7 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'cart_screen.dart';
 import 'payment_screen.dart';
+import 'review_widgets.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -285,6 +286,7 @@ class _HistoryCard extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text('ยกเลิก: ${order.cancelReason ?? '-'}', style: const TextStyle(fontSize: 12, color: AppColors.red)),
           ),
+        if (order.status == 'completed' && context.read<AppState>().reviews != null) OrderReviewButton(order: order),
         const Divider(color: AppColors.ink2, height: 20),
         Row(children: [
           Text(baht(order.total), style: TextStyle(fontWeight: FontWeight.w700, decoration: cancelled ? TextDecoration.lineThrough : null)),

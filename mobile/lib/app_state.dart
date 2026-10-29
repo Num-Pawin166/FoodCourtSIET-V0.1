@@ -4,17 +4,20 @@ import 'api.dart';
 import 'google_auth.dart';
 import 'local_db.dart';
 import 'models.dart';
+import 'reviews.dart';
 
 /// สถานะกลางของแอป: บัญชีผู้ใช้, แท็บปัจจุบัน, ร้านที่เลือก, ตะกร้า, เมนูโปรด
 class AppState extends ChangeNotifier {
   final Api api;
   /// ฐานข้อมูลในเครื่อง: ตะกร้า / ออเดอร์ล่าสุด / แชท AI
   final LocalStore store;
+  /// รีวิวร้านบน Firestore (null = ปิดใช้ เช่น บนเว็บ หรือเชื่อม Firebase ไม่ได้)
+  final ReviewService? reviews;
 
   User? user;
   bool restoring = true;
 
-  AppState({Api? api, LocalStore? store})
+  AppState({Api? api, LocalStore? store, this.reviews})
       : api = api ?? Api(),
         store = store ?? LocalStore.platformDefault() {
     this.api.onUnauthorized = logout;
