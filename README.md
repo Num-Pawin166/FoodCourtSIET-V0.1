@@ -32,7 +32,7 @@
 | [docs/TESTING.md](docs/TESTING.md) | การทดสอบทั้ง 4 ประเภท + CI + วิธีรันเทสต์เอง |
 | [docs/RUBRIC_CHECKLIST.md](docs/RUBRIC_CHECKLIST.md) | เทียบงานกับเกณฑ์การประเมิน + เช็กลิสต์ก่อนนำเสนอ |
 | [docs/USABILITY_TEST.md](docs/USABILITY_TEST.md) | แบบฟอร์มรายงาน Usability Testing (SUS) |
-| [docs/flowcharts/](docs/flowcharts/) | Flowchart 9 ภาพ (PNG) พร้อมใส่สไลด์ |
+| [docs/flowcharts/](docs/flowcharts/) | Flowchart 9 ภาพ |
 
 ## วิธีรัน
 
