@@ -162,7 +162,7 @@ packages:
     source: hosted
     version: "1.0.9"
   fake_async:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: fake_async
       sha256: "5368f224a74523e8d2e7399ea1638b37aecfca824a3cc4dfdf77bf1fa905ac44"
@@ -353,7 +353,7 @@ packages:
     source: hosted
     version: "0.2.2+1"
   image_picker_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: image_picker_platform_interface
       sha256: "2dee4b4e3be429db71472c9c559c981498070a61af1ba82e0e4986fc5dadc042"

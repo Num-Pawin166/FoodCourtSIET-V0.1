@@ -2,15 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'models.dart';
+import 'order_alarm.dart';
 
 class AppState extends ChangeNotifier {
-  final api = Api();
+  final Api api;
+  /// เสียงเตือนออเดอร์ใหม่ (หน้าออเดอร์สั่งดัง/หยุด)
+  final OrderAlarm alarm;
   Vendor? user;
   bool restoring = true;
   int tab = 0;
 
-  AppState() {
-    api.onUnauthorized = logout;
+  AppState({Api? api, OrderAlarm? alarm})
+      : api = api ?? Api(),
+        alarm = alarm ?? OrderAlarm() {
+    this.api.onUnauthorized = logout;
   }
 
   Future<void> restore() async {
@@ -49,6 +54,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    alarm.stop();
     api.token = null;
     user = null;
     tab = 0;

@@ -19,6 +19,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   bool _history = false;
   List<Order>? _orders;
   String? _error;
+  bool _offline = false; // แสดงข้อมูลล่าสุดที่บันทึกไว้ในเครื่อง
   Timer? _poll;
 
   @override
@@ -40,8 +41,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   Future<void> _load() async {
     final history = _history;
     try {
-      final list = await context.read<AppState>().api.orders(history: history);
-      if (mounted && history == _history) setState(() { _orders = list; _error = null; });
+      final (list, offline) = await context.read<AppState>().loadOrders(history: history);
+      if (mounted && history == _history) setState(() { _orders = list; _error = null; _offline = offline; });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     }
@@ -69,6 +70,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ),
       ),
       const SizedBox(height: 12),
+      if (_offline)
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(color: const Color(0xFFFFF1D6), borderRadius: BorderRadius.circular(10)),
+          child: const Row(children: [
+            Icon(Icons.cloud_off, size: 18, color: Color(0xFFA86400)),
+            SizedBox(width: 8),
+            Expanded(child: Text('ออฟไลน์ · แสดงข้อมูลล่าสุดที่บันทึกไว้ในเครื่อง', style: TextStyle(fontSize: 12, color: Color(0xFFA86400)))),
+          ]),
+        ),
       Expanded(child: RefreshIndicator(color: AppColors.accent, onRefresh: _load, child: _body())),
     ]);
   }

@@ -115,7 +115,7 @@ class _CartScreenState extends State<CartScreen> {
                         controller: _note,
                         maxLength: 200,
                         maxLines: 2,
-                        onChanged: (v) => state.cartNote = v,
+                        onChanged: state.setCartNote,
                         decoration: InputDecoration(
                           hintText: 'เช่น แยกน้ำซุป , ไม่ใส่ผักดอง',
                           counterText: '',

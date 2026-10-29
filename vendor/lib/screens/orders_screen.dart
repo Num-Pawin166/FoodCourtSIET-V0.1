@@ -29,11 +29,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String? _error;
   Timer? _poll;
   final Set<int> _busy = {};
-  final _alarm = OrderAlarm();
+  late final OrderAlarm _alarm;
 
   @override
   void initState() {
     super.initState();
+    _alarm = context.read<AppState>().alarm;
     _load();
     _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
   }
@@ -41,7 +42,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   void dispose() {
     _poll?.cancel();
-    _alarm.dispose();
+    _alarm.stop();
     super.dispose();
   }
 

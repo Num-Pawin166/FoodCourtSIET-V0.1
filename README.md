@@ -1,5 +1,7 @@
 # FoodCourt SIET
 
+[![CI](https://github.com/Num-Pawin166/FoodCourtSIET-V0.1/actions/workflows/ci.yml/badge.svg)](https://github.com/Num-Pawin166/FoodCourtSIET-V0.1/actions/workflows/ci.yml)
+
 ระบบสั่งอาหารล่วงหน้าของศูนย์อาหาร SIET - KMITL ประกอบด้วย 3 ส่วน
 
 | ส่วน | ผู้ใช้ | เทคโนโลยี | โฟลเดอร์ |
@@ -196,8 +198,12 @@ flutter build web --release --base-href /app/ --dart-define=API_URL=https://<URL
 - **เปลี่ยนรหัสผ่าน `admin` และบัญชีร้านทันที** ผ่านเว็บหลังบ้าน (ข้อมูลตัวอย่างใช้รหัสที่เปิดเผยใน README)
 - รีเซ็ตข้อมูลบน Turso: ใส่ `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` ใน `backend/.env` แล้ว `npm run seed`
 
+## การทดสอบ + CI
+- เทสต์ครบ 4 ประเภท (Unit / Widget / Integration / Security) — backend 97 · แอปนักศึกษา 95 · แอปร้านค้า 45 เทสต์ coverage ทุกส่วน > 90%
+- GitHub Actions รันเทสต์ + build APK ทุกครั้งที่ push / เปิด PR — รายละเอียดและวิธีรันเอง: [docs/TESTING.md](docs/TESTING.md)
+- แบบฟอร์มรายงาน Usability Testing: [docs/USABILITY_TEST.md](docs/USABILITY_TEST.md)
+
 ## สิ่งที่ยังไม่ได้ทำ (ต่อยอดได้)
-- รูปหน้าร้าน (ตอนนี้มีเฉพาะรูปเมนู)
 - Push notification เมื่ออาหารพร้อม (ตอนนี้แอปดึงสถานะใหม่ทุก 5 วินาที)
 - ตรวจสลิปอัตโนมัติ (เช่น SlipOK / EasySlip) แทนให้ร้านตรวจเอง
 - ก่อนใช้งานจริงต้องตั้งค่า `JWT_SECRET` เป็นค่าลับของตัวเอง

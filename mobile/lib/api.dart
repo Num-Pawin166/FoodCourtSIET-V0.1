@@ -12,8 +12,12 @@ class ApiException implements Exception {
 }
 
 class Api {
+  /// เปลี่ยนเป็น MockClient ได้ในเทสต์
+  final http.Client client;
   String? token;
   void Function()? onUnauthorized;
+
+  Api({http.Client? client}) : client = client ?? http.Client();
 
   /// ส่ง request: body เป็น JSON หรือ bytes (ไฟล์รูป) — คืน response ดิบเมื่อสำเร็จ
   Future<http.Response> _request(String method, String path, {Object? json, List<int>? bytes}) async {
@@ -28,7 +32,7 @@ class Api {
     }
     http.Response res;
     try {
-      res = await http.Response.fromStream(await req.send().timeout(const Duration(seconds: 70)));
+      res = await http.Response.fromStream(await client.send(req).timeout(const Duration(seconds: 70)));
     } catch (_) {
       throw ApiException(0, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง (เซิร์ฟเวอร์ฟรีอาจกำลังตื่น ~1 นาที)');
     }
@@ -101,8 +105,11 @@ class Api {
       Order.fromJson(await _send('POST', '/orders/$orderId/slip', null, imageBytes));
   Future<List<int>> slipBytes(int orderId) async => (await _request('GET', '/orders/$orderId/slip')).bodyBytes;
 
-  Future<List<Order>> orders({bool history = false}) async =>
-      (await _send('GET', '/orders?scope=${history ? 'history' : 'active'}') as List).map((e) => Order.fromJson(e)).toList();
+  /// JSON ดิบของออเดอร์ (AppState เก็บลงฐานข้อมูลในเครื่องไว้ดูตอนออฟไลน์)
+  Future<List<Map<String, dynamic>>> ordersJson({bool history = false}) async =>
+      (await _send('GET', '/orders?scope=${history ? 'history' : 'active'}') as List).cast<Map<String, dynamic>>();
+
+  Future<List<Order>> orders({bool history = false}) async => (await ordersJson(history: history)).map(Order.fromJson).toList();
 
   Future<Order> cancelOrder(int id) async => Order.fromJson(await _send('POST', '/orders/$id/cancel'));
 

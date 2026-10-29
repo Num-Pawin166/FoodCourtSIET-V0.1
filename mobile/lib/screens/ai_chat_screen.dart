@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../app_state.dart';
+import '../local_db.dart';
 import '../models.dart';
 import '../theme.dart';
 import '../widgets.dart';
@@ -10,6 +11,9 @@ class _Msg {
   final String text;
   final List<AiPick> picks;
   _Msg(this.fromUser, this.text, [this.picks = const []]);
+
+  SavedChat toSaved() => SavedChat(fromUser, text, [for (final p in picks) p.toJson()]);
+  static _Msg fromSaved(SavedChat c) => _Msg(c.fromUser, c.text, c.picks.map(AiPick.fromJson).toList());
 }
 
 /// ผู้ช่วยแนะนำเมนู (AI by Gemini)
@@ -23,10 +27,34 @@ class AiChatScreen extends StatefulWidget {
 class _AiChatScreenState extends State<AiChatScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
-  final List<_Msg> _messages = [
-    _Msg(false, 'สวัสดี! บอกงบ เวลาที่อยากได้รับอาหาร หรือสิ่งที่อยากกิน/ไม่กินได้เลย เดี๋ยวช่วยเลือกจากร้านที่เปิดอยู่ให้'),
-  ];
+  static final _greeting = _Msg(false, 'สวัสดี! บอกงบ เวลาที่อยากได้รับอาหาร หรือสิ่งที่อยากกิน/ไม่กินได้เลย เดี๋ยวช่วยเลือกจากร้านที่เปิดอยู่ให้');
+  final List<_Msg> _messages = [_greeting];
   bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadHistory();
+  }
+
+  /// แชทเก่าจากฐานข้อมูลในเครื่อง
+  Future<void> _loadHistory() async {
+    try {
+      final saved = await context.read<AppState>().store.chatHistory();
+      if (!mounted || saved.isEmpty) return;
+      setState(() => _messages.insertAll(1, saved.map(_Msg.fromSaved)));
+      _scrollToEnd();
+    } catch (e) {
+      debugPrint('load chat failed: $e');
+    }
+  }
+
+  void _remember(_Msg m) => context.read<AppState>().store.addChat(m.toSaved()).catchError((Object e) => debugPrint('save chat failed: $e'));
+
+  Future<void> _clearHistory() async {
+    await context.read<AppState>().store.clearChat().catchError((Object e) => debugPrint('clear chat failed: $e'));
+    if (mounted) setState(() => _messages..clear()..add(_greeting));
+  }
 
   static const _suggestions = [
     'งบ 50 บาท อยากกินอะไรไม่เผ็ด รับได้ภายใน 12:00',
@@ -45,10 +73,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
     final text = (preset ?? _input.text).trim();
     if (text.isEmpty || _sending) return;
     _input.clear();
+    final mine = _Msg(true, text);
     setState(() {
-      _messages.add(_Msg(true, text));
+      _messages.add(mine);
       _sending = true;
     });
+    _remember(mine);
     _scrollToEnd();
     try {
       // ส่งประวัติแชท (ไม่รวมข้อความทักทายแรก) เพื่อให้ AI เข้าใจบริบทต่อเนื่อง
@@ -56,7 +86,11 @@ class _AiChatScreenState extends State<AiChatScreen> {
         for (final m in _messages.skip(1)) {'role': m.fromUser ? 'user' : 'assistant', 'text': m.text},
       ];
       final r = await context.read<AppState>().api.aiChat(history);
-      if (mounted) setState(() => _messages.add(_Msg(false, r.reply, r.items)));
+      final reply = _Msg(false, r.reply, r.items);
+      if (mounted) {
+        setState(() => _messages.add(reply));
+        _remember(reply);
+      }
     } catch (e) {
       if (mounted) setState(() => _messages.add(_Msg(false, 'ขอโทษนะ ตอนนี้ตอบไม่ได้ ($e)')));
     } finally {
@@ -97,6 +131,12 @@ class _AiChatScreenState extends State<AiChatScreen> {
                   Text('AI by Gemini · แนะนำจากร้านที่เปิดอยู่ตอนนี้', style: TextStyle(fontSize: 11, color: AppColors.muted)),
                 ]),
               ),
+              if (_messages.length > 1)
+                IconButton(
+                  tooltip: 'ล้างประวัติแชท',
+                  icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.ink2),
+                  onPressed: _sending ? null : _clearHistory,
+                ),
             ]),
           ),
           Expanded(

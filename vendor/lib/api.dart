@@ -13,8 +13,12 @@ class ApiException implements Exception {
 
 /// เรียก API ฝั่งร้านค้า (/api/vendor/*) — ผูกกับร้านของบัญชีที่ล็อกอินเสมอ
 class Api {
+  /// เปลี่ยนเป็น MockClient ได้ในเทสต์
+  final http.Client client;
   String? token;
   void Function()? onUnauthorized;
+
+  Api({http.Client? client}) : client = client ?? http.Client();
 
   /// ส่ง request: body เป็น JSON หรือ bytes (ไฟล์รูป) — คืน response ดิบเมื่อสำเร็จ
   Future<http.Response> _request(String method, String path, {Object? json, List<int>? bytes}) async {
@@ -29,7 +33,7 @@ class Api {
     }
     http.Response res;
     try {
-      res = await http.Response.fromStream(await req.send().timeout(const Duration(seconds: 70)));
+      res = await http.Response.fromStream(await client.send(req).timeout(const Duration(seconds: 70)));
     } catch (_) {
       throw ApiException(0, 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง (เซิร์ฟเวอร์ฟรีอาจกำลังตื่น ~1 นาที)');
     }

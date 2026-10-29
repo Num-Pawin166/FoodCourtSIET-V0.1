@@ -1,0 +1,84 @@
+# CI: ทุกครั้งที่ push / เปิด Pull Request → ทดสอบ + วัด coverage + build ทั้ง backend และแอปทั้ง 2 ตัว
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Node.js) — test + coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      # Unit + Integration + Security (API จริง + SQLite ชั่วคราว) / ล้มเหลวถ้า coverage < 70%
+      - run: npm run test:coverage
+      - name: Check server starts
+        run: |
+          PORT=3999 DB_PATH=/tmp/ci.db timeout 20 node src/server.js &
+          for i in $(seq 1 30); do curl -sf http://localhost:3999/api/health && exit 0; sleep 0.5; done
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage/lcov.info
+
+  flutter:
+    name: ${{ matrix.app.name }} — analyze, test, build APK
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - { dir: mobile, name: Student app, apk: FoodCourt-SIET-student.apk }
+          - { dir: vendor, name: Vendor app, apk: FoodCourt-SIET-vendor.apk }
+    defaults:
+      run:
+        working-directory: ${{ matrix.app.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.5
+          channel: stable
+          cache: true
+      # SQLite สำหรับเทสต์ฐานข้อมูลในเครื่อง (sqflite_common_ffi)
+      - run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      - run: flutter pub get
+      - run: flutter analyze
+      # Unit + Widget + Integration + Security
+      - run: flutter test --coverage
+      - name: Coverage ≥ 70%
+        run: python3 ../scripts/check_coverage.py coverage/lcov.info 70
+      - name: Build release APK
+        run: flutter build apk --release --dart-define=API_URL=https://foodcourt-siet.onrender.com/api
+      - run: cp build/app/outputs/flutter-apk/app-release.apk ${{ matrix.app.apk }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app.dir }}-apk
+          path: ${{ matrix.app.dir }}/${{ matrix.app.apk }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.app.dir }}-coverage
+          path: ${{ matrix.app.dir }}/coverage/lcov.info

@@ -39,7 +39,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
-    final user = state.user!;
+    final user = state.user;
+    if (user == null) return const SizedBox.shrink(); // เพิ่งออกจากระบบ กำลังกลับไปหน้า Login
     // ซ่อนรายการที่เพิ่งกดเลิกโปรดทันที
     final favs = _favorites?.where((f) => state.favoriteIds.contains(f.id)).toList();
     return RefreshIndicator(

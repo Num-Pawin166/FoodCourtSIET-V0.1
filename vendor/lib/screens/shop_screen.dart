@@ -186,10 +186,7 @@ class _ShopScreenState extends State<ShopScreen> {
       const Text('ร้านของฉัน', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
       const SizedBox(height: 12),
       // โปรไฟล์: รูปร้าน + ชื่อเจ้าของ + รหัสผ่าน
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: cardDecoration(),
-        child: Column(children: [
+      _section(Column(children: [
           Row(children: [
             GestureDetector(
               onTap: _busyImage ? null : _changeShopImage,
@@ -240,8 +237,7 @@ class _ShopScreenState extends State<ShopScreen> {
             trailing: const Icon(Icons.chevron_right, color: AppColors.accent),
             onTap: _changePassword,
           ),
-        ]),
-      ),
+        ])),
       const SizedBox(height: 14),
       _section(Column(children: [
         SwitchListTile(
@@ -310,7 +306,11 @@ class _ShopScreenState extends State<ShopScreen> {
     ]);
   }
 
-  Widget _section(Widget child) => Container(padding: const EdgeInsets.all(14), decoration: cardDecoration(), child: child);
+  /// การ์ดพื้นขาว — มี Material ใสอยู่ข้างใน ให้ ListTile แสดง ripple ได้
+  Widget _section(Widget child) => Container(
+        decoration: cardDecoration(),
+        child: Material(type: MaterialType.transparency, child: Padding(padding: const EdgeInsets.all(14), child: child)),
+      );
 
   Widget _timeBox(String label, String value, VoidCallback onTap) => InkWell(
         onTap: onTap,

@@ -12,6 +12,13 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const ALLOWED_DOMAIN = (process.env.ALLOWED_EMAIL_DOMAIN || 'kmitl.ac.th').toLowerCase();
 const googleClient = new OAuth2Client();
 
+/** บัญชี Google ที่ยอมให้เข้า: ยืนยันอีเมลแล้ว + hd (Workspace domain) ตรง + ท้ายอีเมลตรง
+ *  ตรวจทั้ง hd และท้ายอีเมล กันบัญชี gmail ที่ตั้งชื่อคล้าย */
+export function isAllowedGoogleAccount(p, domain = ALLOWED_DOMAIN) {
+  const email = String(p?.email || '').toLowerCase();
+  return !!p?.email_verified && p.hd === domain && email.endsWith(`@${domain}`);
+}
+
 // แอปดึงค่านี้ไปตั้งค่าปุ่ม Google (client ID ไม่ใช่ความลับ)
 r.get('/config', (_req, res) => {
   res.json({ google_client_id: GOOGLE_CLIENT_ID || null, allowed_domain: ALLOWED_DOMAIN });
@@ -30,8 +37,7 @@ r.post('/google', async (req, res) => {
     throw new HttpError(401, 'ยืนยันตัวตนกับ Google ไม่สำเร็จ กรุณาลองใหม่');
   }
   const email = String(p?.email || '').toLowerCase();
-  // hd = Google Workspace domain ของบัญชี — ตรวจทั้ง hd และท้ายอีเมล กันบัญชี gmail ที่ตั้งชื่อคล้าย
-  if (!p?.email_verified || p.hd !== ALLOWED_DOMAIN || !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+  if (!isAllowedGoogleAccount(p)) {
     throw new HttpError(403, `ใช้ได้เฉพาะอีเมล @${ALLOWED_DOMAIN} เท่านั้น`);
   }
 

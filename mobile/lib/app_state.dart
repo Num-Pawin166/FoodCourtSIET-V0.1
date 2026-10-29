@@ -2,17 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'google_auth.dart';
+import 'local_db.dart';
 import 'models.dart';
 
 /// สถานะกลางของแอป: บัญชีผู้ใช้, แท็บปัจจุบัน, ร้านที่เลือก, ตะกร้า, เมนูโปรด
 class AppState extends ChangeNotifier {
-  final api = Api();
+  final Api api;
+  /// ฐานข้อมูลในเครื่อง: ตะกร้า / ออเดอร์ล่าสุด / แชท AI
+  final LocalStore store;
 
   User? user;
   bool restoring = true;
 
-  AppState() {
-    api.onUnauthorized = logout;
+  AppState({Api? api, LocalStore? store})
+      : api = api ?? Api(),
+        store = store ?? LocalStore.platformDefault() {
+    this.api.onUnauthorized = logout;
   }
 
   // ---------- auth ----------
@@ -25,6 +30,7 @@ class AppState extends ChangeNotifier {
         try {
           user = await api.me();
           await loadFavorites();
+          await _restoreCart();
         } catch (_) {
           api.token = null;
         }
@@ -50,6 +56,7 @@ class AppState extends ChangeNotifier {
       debugPrint('save token failed: $e'); // ล็อกอินได้ แค่ต้องล็อกอินใหม่เมื่อเปิดแอปครั้งหน้า
     }
     await loadFavorites().catchError((_) {});
+    await _restoreCart();
     notifyListeners();
   }
 
@@ -71,9 +78,14 @@ class AppState extends ChangeNotifier {
     user = null;
     tab = 0;
     selectedShopId = null;
-    clearCart();
+    clearCart(persist: false);
     favoriteIds.clear();
     notifyListeners();
+    try {
+      await store.clearAll(); // เครื่องที่ใช้ร่วมกัน: คนถัดไปต้องไม่เห็นตะกร้า/ออเดอร์/แชทของเรา
+    } catch (e) {
+      debugPrint('clear local db failed: $e');
+    }
     try {
       await (await SharedPreferences.getInstance()).remove('token');
     } catch (e) {
@@ -119,15 +131,45 @@ class AppState extends ChangeNotifier {
       _cartItems[item.id] = item;
     }
     if (cartQty.isEmpty) cartShop = null;
+    _saveCart();
     notifyListeners();
   }
 
-  void clearCart({bool notify = true}) {
+  void setCartNote(String note) {
+    cartNote = note;
+    _saveCart();
+  }
+
+  void clearCart({bool notify = true, bool persist = true}) {
     cartShop = null;
     cartQty.clear();
     _cartItems.clear();
     cartNote = '';
+    if (persist) _saveCart();
     if (notify) notifyListeners();
+  }
+
+  /// บันทึกตะกร้าลงฐานข้อมูลในเครื่อง (ไม่รอผล — บันทึกไม่ได้ก็ยังสั่งอาหารได้ปกติ)
+  Future<void> _saveCart() => store
+      .saveCart(cartShop == null
+          ? null
+          : SavedCart(shop: cartShop!.toJson(), items: [for (final (m, q) in cartLines) (m.toJson(), q)], note: cartNote))
+      .catchError((Object e) => debugPrint('save cart failed: $e'));
+
+  Future<void> _restoreCart() async {
+    try {
+      final saved = await store.loadCart();
+      if (saved == null) return;
+      cartShop = Shop.fromJson(saved.shop);
+      for (final (json, qty) in saved.items) {
+        final item = MenuItem.fromJson(json);
+        _cartItems[item.id] = item;
+        cartQty[item.id] = qty;
+      }
+      cartNote = saved.note;
+    } catch (e) {
+      debugPrint('restore cart failed: $e');
+    }
   }
 
   /// "สั่งอีกครั้ง" จากประวัติ: ใส่เมนูที่ยังมีขายลงตะกร้า คืนจำนวนเมนูที่หมดแล้ว
@@ -147,8 +189,24 @@ class AppState extends ChangeNotifier {
     }
     cartNote = order.note;
     selectedShopId = shop.id;
+    _saveCart();
     notifyListeners();
     return missing;
+  }
+
+  // ---------- ออเดอร์ (ออนไลน์ก่อน ถ้าไม่มีเน็ตใช้ข้อมูลล่าสุดในเครื่อง) ----------
+  /// คืน (รายการออเดอร์, เป็นข้อมูลออฟไลน์หรือไม่)
+  Future<(List<Order>, bool)> loadOrders({bool history = false}) async {
+    try {
+      final json = await api.ordersJson(history: history);
+      await store.cacheOrders(json, history: history).catchError((Object e) => debugPrint('cache orders failed: $e'));
+      return (json.map(Order.fromJson).toList(), false);
+    } on ApiException catch (e) {
+      if (e.status != 0) rethrow; // เซิร์ฟเวอร์ตอบ error จริง ไม่ใช่เน็ตหลุด
+      final cached = await store.cachedOrders(history: history);
+      if (cached == null) rethrow;
+      return (cached.map(Order.fromJson).toList(), true);
+    }
   }
 
   // ---------- เมนูโปรด ----------

@@ -46,6 +46,13 @@ class Shop {
         menu: (j['menu'] as List? ?? []).map((e) => MenuItem.fromJson(e)).toList(),
         pickupSlots: (j['pickup_slots'] as List? ?? []).cast<String>(),
       );
+
+  /// สำหรับบันทึกลงฐานข้อมูลในเครื่อง (ไม่รวมเมนู/ช่วงเวลา ซึ่งต้องโหลดใหม่เสมอ)
+  Map<String, dynamic> toJson() => {
+        'id': id, 'code': code, 'name': name, 'description': description, 'category': category,
+        'open_time': openTime, 'close_time': closeTime, 'prep_min': prepMin, 'prep_max': prepMax,
+        'open_now': openNow, 'queue_count': queueCount, 'promptpay_enabled': promptpayEnabled, 'image_url': imageUrl,
+      };
 }
 
 class MenuItem {
@@ -66,6 +73,11 @@ class MenuItem {
         price: j['price'], isAvailable: j['is_available'] == true, shopName: j['shop_name'],
         imageUrl: j['image_url'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id, 'shop_id': shopId, 'name': name, 'description': description, 'price': price,
+        'is_available': isAvailable, 'shop_name': shopName, 'image_url': imageUrl,
+      };
 }
 
 class AiPick {
@@ -83,6 +95,11 @@ class AiPick {
         menuItemId: j['menu_item_id'], name: j['name'], price: j['price'],
         shopId: j['shop_id'], shopName: j['shop_name'], reason: j['reason'] ?? '', imageUrl: j['image_url'],
       );
+
+  Map<String, dynamic> toJson() => {
+        'menu_item_id': menuItemId, 'name': name, 'price': price, 'shop_id': shopId, 'shop_name': shopName,
+        'reason': reason, 'image_url': imageUrl,
+      };
 }
 
 class AiReply {
