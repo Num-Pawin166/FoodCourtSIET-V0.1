@@ -60,5 +60,5 @@
 - https://drive.google.com/file/d/1ZdlSqq0xJHlt6mtTEzuRzuDPS7xh3fap/view?usp=sharing
 4. นางสาวสราสินี สิทธิสาร | รหัส: 67030236 | สาขาเทคโนโลยีคอมพิวเตอร์
 - https://drive.google.com/file/d/1StQ3CfopS8a0sXL233PPYncLyErwbPvg/view?usp=sharing
-5. นางสาวณัฐรินีย์ หนองกาวี | สถานะ: บุคลากร
+5. นางสาวณัฐรินีย์ หนองกาวี | สถานะ: นักวิชาการ ฝ่ายสนับสนุนวิชาการ
 - https://drive.google.com/file/d/1Sf9c7efQ1lxScknbFXv67J8SUGU44tll/view?usp=sharing
