@@ -53,7 +53,12 @@
 
 ## 6. กิตติกรรมประกาศ / รายชื่อผู้เข้าร่วมทดสอบระบบ
 1. นายสิทธิศักดิ์ จันทวงศ์ | รหัส: 68040509 | สาขาเศรษฐศาสตร์และธุรกิจเพื่อพัฒนาการเกษตร
+- https://drive.google.com/file/d/1AFHg8QrAcYmRQC6ut4PFC7Kql6V-aXQw/view?usp=sharing
 2. นายวิศวะ กำจร | รหัส: 67030096 | สาขาเทคโนโลยีคอมพิวเตอร์
-3. นางสาวณัฐรินีย์ หนองกาวี | รหัส: 65010324 | สาขาวิศวกรรมเกษตรอัจฉริยะ
+- https://drive.google.com/file/d/1FNGN0xW7yV304H65xV6jUx87XGrh5L6Q/view?usp=sharing
+3. ภิณญภูมิ แสนตระกูล | รหัส: 65010324 | สาขาวิศวกรรมเกษตรอัจฉริยะ
+- https://drive.google.com/file/d/1ZdlSqq0xJHlt6mtTEzuRzuDPS7xh3fap/view?usp=sharing
 4. นางสาวสราสินี สิทธิสาร | รหัส: 67030236 | สาขาเทคโนโลยีคอมพิวเตอร์
-5. ภิณญภูมิ แสนตระกูล | สถานะ: บุคลากร
+- https://drive.google.com/file/d/1StQ3CfopS8a0sXL233PPYncLyErwbPvg/view?usp=sharing
+5. นางสาวณัฐรินีย์ หนองกาวี | สถานะ: บุคลากร
+- https://drive.google.com/file/d/1Sf9c7efQ1lxScknbFXv67J8SUGU44tll/view?usp=sharing
