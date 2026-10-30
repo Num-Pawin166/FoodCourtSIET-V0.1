@@ -56,7 +56,7 @@
 - https://drive.google.com/file/d/1AFHg8QrAcYmRQC6ut4PFC7Kql6V-aXQw/view?usp=sharing
 2. นายวิศวะ กำจร | รหัส: 67030096 | สาขาเทคโนโลยีคอมพิวเตอร์
 - https://drive.google.com/file/d/1FNGN0xW7yV304H65xV6jUx87XGrh5L6Q/view?usp=sharing
-3. ภิณญภูมิ แสนตระกูล | รหัส: 65010324 | สาขาวิศวกรรมเกษตรอัจฉริยะ
+3. ภิณญภูมิ แสนตระกูล | รหัส: 68015145 | วิศวะกรรมศาสตร์
 - https://drive.google.com/file/d/1ZdlSqq0xJHlt6mtTEzuRzuDPS7xh3fap/view?usp=sharing
 4. นางสาวสราสินี สิทธิสาร | รหัส: 67030236 | สาขาเทคโนโลยีคอมพิวเตอร์
 - https://drive.google.com/file/d/1StQ3CfopS8a0sXL233PPYncLyErwbPvg/view?usp=sharing
